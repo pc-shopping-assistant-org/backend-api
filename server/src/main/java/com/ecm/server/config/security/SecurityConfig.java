@@ -71,7 +71,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/payments/webhook/**").permitAll()
 
                         // Admin Endpoints
-                        .requestMatchers("/api/v1/admin/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")
+                        .requestMatchers("/api/v1/admin/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLOYEE", "ROLE_MANAGER")
 
                         // All other endpoints require authentication
                         .anyRequest().authenticated()

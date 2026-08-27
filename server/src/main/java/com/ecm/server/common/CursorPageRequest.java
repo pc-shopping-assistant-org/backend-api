@@ -6,12 +6,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Standard cursor request query parameters.
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 public class CursorPageRequest {
@@ -31,13 +32,13 @@ public class CursorPageRequest {
     @Builder.Default
     @Min(value = MIN_LIMIT, message = "Limit must be at least 1")
     @Max(value = MAX_LIMIT, message = "Limit must not exceed 100")
-    private int limit = DEFAULT_LIMIT;
+    private Integer limit = DEFAULT_LIMIT;
 
     /**
      * Ensure limit stays within safe boundaries.
      */
     public int getSanitizedLimit() {
-        if (limit < MIN_LIMIT) {
+        if (limit == null || limit <= 0) {
             return DEFAULT_LIMIT;
         }
         return Math.min(limit, MAX_LIMIT);
