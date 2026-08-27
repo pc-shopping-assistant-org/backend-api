@@ -53,7 +53,7 @@ public class CursorPageResponse<T> {
         List<T> pageItems = hasNext ? rawItems.subList(0, limit) : rawItems;
 
         String nextCursor = (hasNext && !pageItems.isEmpty())
-                ? cursorExtractor.apply(pageItems.get(pageItems.size() - 1))
+                ? cursorExtractor.apply(pageItems.getLast())
                 : null;
 
         return CursorPageResponse.<T>builder()
