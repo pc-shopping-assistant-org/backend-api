@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -23,6 +24,9 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
     boolean existsByEmail(String email);
 
     boolean existsByPhone(String phone);
+
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.createdAt >= :from AND c.createdAt <= :to")
+    Long countNewCustomersBetween(@Param("from") Instant from, @Param("to") Instant to);
 
     @Query("""
         SELECT c FROM Customer c

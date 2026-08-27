@@ -21,8 +21,25 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     long countByDiscountId(UUID discountId);
 
+    long countByStatus(String status);
+
     @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.customer.id = :customerId AND o.status = 'COMPLETED'")
     Long sumSpentByCustomerId(@Param("customerId") UUID customerId);
+
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.status = 'COMPLETED'")
+    Long sumTotalRevenue();
+
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.status = 'COMPLETED' AND o.orderTime >= :from AND o.orderTime <= :to")
+    Long sumTotalRevenueBetween(@Param("from") Instant from, @Param("to") Instant to);
+
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.orderTime >= :from AND o.orderTime <= :to")
+    Long countOrdersBetween(@Param("from") Instant from, @Param("to") Instant to);
+
+    @Query("SELECT o.status, COUNT(o) FROM Order o GROUP BY o.status")
+    List<Object[]> countOrdersByStatus();
+
+    @Query("SELECT o FROM Order o WHERE o.status = 'COMPLETED' AND o.orderTime >= :from AND o.orderTime <= :to ORDER BY o.orderTime ASC")
+    List<Order> findCompletedOrdersBetween(@Param("from") Instant from, @Param("to") Instant to);
 
     @Query("""
         SELECT o FROM Order o
