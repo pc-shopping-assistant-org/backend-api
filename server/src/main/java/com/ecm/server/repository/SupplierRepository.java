@@ -1,6 +1,7 @@
 package com.ecm.server.repository;
 
 import com.ecm.server.model.Supplier;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -22,16 +23,27 @@ public interface SupplierRepository extends JpaRepository<Supplier, UUID> {
 
     @Query("""
         SELECT s FROM Supplier s
-        WHERE (:cursor IS NULL OR s.id < :cursor)
-          AND (:keyword IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(s.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(s.phone) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        WHERE (:keyword IS NULL OR LOWER(s.name) LIKE :keyword OR LOWER(s.email) LIKE :keyword OR LOWER(s.phone) LIKE :keyword)
           AND (:status IS NULL OR s.status = :status)
         ORDER BY s.id DESC
-        LIMIT :queryLimit
     """)
-    List<Supplier> findSuppliersByCursor(
+    List<Supplier> findSuppliersInitial(
+            @Param("keyword") String keyword,
+            @Param("status") String status,
+            Pageable pageable
+    );
+
+    @Query("""
+        SELECT s FROM Supplier s
+        WHERE s.id < :cursor
+          AND (:keyword IS NULL OR LOWER(s.name) LIKE :keyword OR LOWER(s.email) LIKE :keyword OR LOWER(s.phone) LIKE :keyword)
+          AND (:status IS NULL OR s.status = :status)
+        ORDER BY s.id DESC
+    """)
+    List<Supplier> findSuppliersAfterCursor(
             @Param("cursor") UUID cursor,
             @Param("keyword") String keyword,
             @Param("status") String status,
-            @Param("queryLimit") int queryLimit
+            Pageable pageable
     );
 }

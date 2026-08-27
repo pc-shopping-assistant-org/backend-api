@@ -14,6 +14,8 @@ import com.ecm.server.repository.SupplierRepository;
 import com.ecm.server.service.SupplierService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,13 +42,14 @@ public class SupplierServiceImpl implements SupplierService {
         UUID cursorUuid = (request.getCursor() != null && !request.getCursor().isBlank())
                 ? UUID.fromString(request.getCursor())
                 : null;
+        String keywordPattern = (request.getKeyword() != null && !request.getKeyword().isBlank())
+                ? "%" + request.getKeyword().trim().toLowerCase() + "%"
+                : null;
 
-        List<Supplier> suppliers = supplierRepository.findSuppliersByCursor(
-                cursorUuid,
-                request.getKeyword(),
-                request.getStatus(),
-                queryLimit
-        );
+        Pageable pageable = PageRequest.of(0, queryLimit);
+        List<Supplier> suppliers = (cursorUuid == null)
+                ? supplierRepository.findSuppliersInitial(keywordPattern, request.getStatus(), pageable)
+                : supplierRepository.findSuppliersAfterCursor(cursorUuid, keywordPattern, request.getStatus(), pageable);
 
         // 2. Transform entity list to DTO list via MapStruct
         List<SupplierResponse> dtoList = supplierMapper.toResponseList(suppliers);
