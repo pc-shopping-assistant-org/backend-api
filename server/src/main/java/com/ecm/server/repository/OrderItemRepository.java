@@ -12,4 +12,6 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, UUID> {
     long countByProductVariantId(UUID productVariantId);
 
     long countByProductVariantProductId(UUID productId);
+
+    long countByDiscountId(UUID discountId);
 }

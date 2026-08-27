@@ -16,6 +16,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     long countByCustomerId(UUID customerId);
 
+    long countByDiscountId(UUID discountId);
+
     @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.customer.id = :customerId AND o.status = 'COMPLETED'")
     Long sumSpentByCustomerId(@Param("customerId") UUID customerId);
 }
