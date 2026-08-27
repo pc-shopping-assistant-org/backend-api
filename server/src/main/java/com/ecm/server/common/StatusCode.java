@@ -56,6 +56,8 @@ public enum StatusCode {
     OPTION_NOT_FOUND(40412, "Option not found", HttpStatus.NOT_FOUND),
     CATEGORY_GROUP_NOT_FOUND(40413, "Category attribute group not found", HttpStatus.NOT_FOUND),
     CATEGORY_ATTRIBUTE_NOT_FOUND(40414, "Category attribute assignment not found", HttpStatus.NOT_FOUND),
+    IMAGE_NOT_FOUND(40415, "Product image not found", HttpStatus.NOT_FOUND),
+    SUPPLIER_NOT_FOUND(40416, "Supplier not found", HttpStatus.NOT_FOUND),
 
     // =====================================================================
     // 5. Conflict & Business Rule Codes (409xx, 422xx)

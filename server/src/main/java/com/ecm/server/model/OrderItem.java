@@ -19,27 +19,39 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "variant_options")
+@Table(name = "order_items")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class VariantOption {
+public class OrderItem {
 
     @Id
     @GeneratedValue
     private UUID id;
 
+    @Column(name = "order_id", nullable = false)
+    private UUID orderId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_variant_id", nullable = false)
     private ProductVariant productVariant;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "option_id", nullable = false)
-    private Option option;
+    @Column(name = "quantity", nullable = false)
+    private int quantity;
 
-    @Column(name = "status", nullable = false, length = 15)
+    @Column(name = "unit_amount", nullable = false)
+    private int unitAmount;
+
+    @Column(name = "discount_id")
+    private UUID discountId;
+
+    @Column(name = "discount_amount", nullable = false)
+    @Builder.Default
+    private int discountAmount = 0;
+
+    @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private String status = "ACTIVE";
 

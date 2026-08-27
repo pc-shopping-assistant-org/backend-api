@@ -20,42 +20,49 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
-import java.util.ArrayList;
+import java.time.LocalDate;
 import java.util.HashMap;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "products")
+@Table(name = "product_variants")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Product {
+public class ProductVariant {
 
     @Id
     @GeneratedValue
     private UUID id;
 
-    @Column(name = "name", nullable = false, length = 255)
-    private String name;
-
-    @Column(name = "seo_name", nullable = false, unique = true, length = 255)
-    private String seoName;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "brand_id")
-    private Brand brand;
+    @JoinColumn(name = "product_id", nullable = false)
+    private Product product;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
-    private Category category;
+    @Column(name = "price", nullable = false)
+    private Integer price;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "supplier_id")
-    private Supplier supplier;
+    @Column(name = "price_sale", nullable = false)
+    private Integer priceSale;
+
+    @Column(name = "quantity", nullable = false)
+    @Builder.Default
+    private Integer quantity = 0;
+
+    @Column(name = "sku", nullable = false, unique = true, length = 100)
+    private String sku;
+
+    @Column(name = "model", length = 100)
+    private String model;
+
+    @Column(name = "inventory_policy", nullable = false, length = 15)
+    @Builder.Default
+    private String inventoryPolicy = "DENY";
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "specifications", columnDefinition = "jsonb")
@@ -65,8 +72,17 @@ public class Product {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "warranty", length = 100)
+    private String warranty;
+
+    @Column(name = "barcode", unique = true, length = 100)
+    private String barcode;
+
     @Column(name = "image_url", length = 255)
     private String imageUrl;
+
+    @Column(name = "release_at")
+    private LocalDate releaseAt;
 
     @Column(name = "status", nullable = false, length = 15)
     @Builder.Default
@@ -86,7 +102,11 @@ public class Product {
     @Column(name = "updated_by")
     private UUID updatedBy;
 
-    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "productVariant", fetch = FetchType.LAZY)
     @Builder.Default
-    private List<ProductVariant> variants = new ArrayList<>();
+    private Set<ProductImage> images = new LinkedHashSet<>();
+
+    @OneToMany(mappedBy = "productVariant", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<VariantOption> variantOptions = new LinkedHashSet<>();
 }
