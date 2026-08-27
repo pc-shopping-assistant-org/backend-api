@@ -19,24 +19,30 @@ import java.util.UUID;
 public class UserPrincipal implements UserDetails {
 
     private final UUID accountId;
+    private final UUID employeeId;
     private final String username;
     private final String password;
     private final String role;
     private final String status;
     private final Collection<? extends GrantedAuthority> authorities;
 
-    public static UserPrincipal create(Account account) {
+    public static UserPrincipal create(Account account, UUID employeeId) {
         String roleName = account.getRole() != null ? account.getRole().getName() : "ROLE_CUSTOMER";
         List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(roleName));
 
         return UserPrincipal.builder()
                 .accountId(account.getId())
+                .employeeId(employeeId)
                 .username(account.getUsername())
                 .password(account.getPassword())
                 .role(roleName)
                 .status(account.getStatus())
                 .authorities(authorities)
                 .build();
+    }
+
+    public static UserPrincipal create(Account account) {
+        return create(account, null);
     }
 
     @Override

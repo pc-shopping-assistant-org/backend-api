@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.LinkedHashSet;
@@ -12,6 +15,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "discounts")
+@EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @Builder
@@ -51,9 +55,11 @@ public class Discount {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "created_by")
+    @CreatedBy
+    @Column(name = "created_by", updatable = false)
     private UUID createdBy;
 
+    @LastModifiedBy
     @Column(name = "updated_by")
     private UUID updatedBy;
 
