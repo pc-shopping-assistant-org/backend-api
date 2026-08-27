@@ -8,16 +8,8 @@ import com.ecm.server.dto.response.InvoiceResponse;
 import com.ecm.server.dto.response.OrderDetailResponse;
 import com.ecm.server.exception.BusinessException;
 import com.ecm.server.mapper.OrderMapper;
-import com.ecm.server.model.Employee;
-import com.ecm.server.model.Order;
-import com.ecm.server.model.OrderItem;
-import com.ecm.server.model.Payment;
-import com.ecm.server.model.ProductVariant;
-import com.ecm.server.repository.EmployeeRepository;
-import com.ecm.server.repository.OrderItemRepository;
-import com.ecm.server.repository.OrderRepository;
-import com.ecm.server.repository.PaymentRepository;
-import com.ecm.server.repository.ProductVariantRepository;
+import com.ecm.server.model.*;
+import com.ecm.server.repository.*;
 import com.ecm.server.service.AdminOrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -177,9 +169,12 @@ public class AdminOrderServiceImpl implements AdminOrderService {
         }
 
         boolean isValid = switch (currentStatus) {
-            case STATUS_PENDING -> STATUS_CONFIRM.equalsIgnoreCase(targetStatus) || STATUS_CANCELLED.equalsIgnoreCase(targetStatus);
-            case STATUS_CONFIRM -> STATUS_SHIPPING.equalsIgnoreCase(targetStatus) || STATUS_CANCELLED.equalsIgnoreCase(targetStatus);
-            case STATUS_SHIPPING -> STATUS_COMPLETED.equalsIgnoreCase(targetStatus) || STATUS_CANCELLED.equalsIgnoreCase(targetStatus);
+            case STATUS_PENDING ->
+                    STATUS_CONFIRM.equalsIgnoreCase(targetStatus) || STATUS_CANCELLED.equalsIgnoreCase(targetStatus);
+            case STATUS_CONFIRM ->
+                    STATUS_SHIPPING.equalsIgnoreCase(targetStatus) || STATUS_CANCELLED.equalsIgnoreCase(targetStatus);
+            case STATUS_SHIPPING ->
+                    STATUS_COMPLETED.equalsIgnoreCase(targetStatus) || STATUS_CANCELLED.equalsIgnoreCase(targetStatus);
             default -> false;
         };
 

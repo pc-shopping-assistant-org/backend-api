@@ -29,13 +29,13 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
     Long countNewCustomersBetween(@Param("from") Instant from, @Param("to") Instant to);
 
     @Query("""
-        SELECT c FROM Customer c
-        JOIN FETCH c.account a
-        LEFT JOIN FETCH a.role r
-        WHERE (:keyword IS NULL OR LOWER(c.fullName) LIKE :keyword OR LOWER(c.email) LIKE :keyword OR LOWER(c.phone) LIKE :keyword OR LOWER(a.username) LIKE :keyword)
-          AND (:status IS NULL OR c.status = :status)
-        ORDER BY c.id DESC
-    """)
+                SELECT c FROM Customer c
+                JOIN FETCH c.account a
+                LEFT JOIN FETCH a.role r
+                WHERE (:keyword IS NULL OR LOWER(c.fullName) LIKE :keyword OR LOWER(c.email) LIKE :keyword OR LOWER(c.phone) LIKE :keyword OR LOWER(a.username) LIKE :keyword)
+                  AND (:status IS NULL OR c.status = :status)
+                ORDER BY c.id DESC
+            """)
     List<Customer> findCustomersInitial(
             @Param("keyword") String keyword,
             @Param("status") String status,
@@ -43,14 +43,14 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
     );
 
     @Query("""
-        SELECT c FROM Customer c
-        JOIN FETCH c.account a
-        LEFT JOIN FETCH a.role r
-        WHERE c.id < :cursor
-          AND (:keyword IS NULL OR LOWER(c.fullName) LIKE :keyword OR LOWER(c.email) LIKE :keyword OR LOWER(c.phone) LIKE :keyword OR LOWER(a.username) LIKE :keyword)
-          AND (:status IS NULL OR c.status = :status)
-        ORDER BY c.id DESC
-    """)
+                SELECT c FROM Customer c
+                JOIN FETCH c.account a
+                LEFT JOIN FETCH a.role r
+                WHERE c.id < :cursor
+                  AND (:keyword IS NULL OR LOWER(c.fullName) LIKE :keyword OR LOWER(c.email) LIKE :keyword OR LOWER(c.phone) LIKE :keyword OR LOWER(a.username) LIKE :keyword)
+                  AND (:status IS NULL OR c.status = :status)
+                ORDER BY c.id DESC
+            """)
     List<Customer> findCustomersAfterCursor(
             @Param("cursor") UUID cursor,
             @Param("keyword") String keyword,

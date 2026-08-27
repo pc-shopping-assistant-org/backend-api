@@ -4,11 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.List;
 
@@ -38,8 +34,8 @@ public class CreateOrderRequest {
 
     @NotBlank(message = "Payment method is required")
     @Pattern(
-        regexp = "^(?i)(COD|STRIPE|CREDIT_CARD|VNPAY|MOMO|SEPAY|BANK_TRANSFER)$",
-        message = "Payment method must be one of: COD, STRIPE, CREDIT_CARD, VNPAY, MOMO, SEPAY, BANK_TRANSFER"
+            regexp = "^(?i)(COD|STRIPE|CREDIT_CARD|VNPAY|MOMO|SEPAY|BANK_TRANSFER)$",
+            message = "Payment method must be one of: COD, STRIPE, CREDIT_CARD, VNPAY, MOMO, SEPAY, BANK_TRANSFER"
     )
     private String paymentMethod;
 }

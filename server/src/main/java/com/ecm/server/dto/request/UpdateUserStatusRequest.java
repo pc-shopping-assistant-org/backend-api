@@ -15,8 +15,8 @@ public class UpdateUserStatusRequest {
 
     @NotBlank(message = "Status is required")
     @Pattern(
-        regexp = "^(ACTIVE|LOCKED|BLOCKED|DELETED)$",
-        message = "Status must be one of: ACTIVE, LOCKED, BLOCKED, DELETED"
+            regexp = "^(ACTIVE|LOCKED|BLOCKED|DELETED)$",
+            message = "Status must be one of: ACTIVE, LOCKED, BLOCKED, DELETED"
     )
     private String status;
 

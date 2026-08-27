@@ -3,7 +3,6 @@ package com.ecm.server.mapper;
 import com.ecm.server.config.GlobalMapperConfig;
 import com.ecm.server.dto.response.InvoiceResponse;
 import com.ecm.server.dto.response.OrderDetailResponse;
-import com.ecm.server.dto.response.OrderItemDetailResponse;
 import com.ecm.server.dto.response.PaymentSummaryResponse;
 import com.ecm.server.model.Order;
 import com.ecm.server.model.Payment;

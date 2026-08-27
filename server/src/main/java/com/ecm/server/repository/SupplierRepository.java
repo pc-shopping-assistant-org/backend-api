@@ -22,11 +22,11 @@ public interface SupplierRepository extends JpaRepository<Supplier, UUID> {
     List<Supplier> findByStatusNot(String status);
 
     @Query("""
-        SELECT s FROM Supplier s
-        WHERE (:keyword IS NULL OR LOWER(s.name) LIKE :keyword OR LOWER(s.email) LIKE :keyword OR LOWER(s.phone) LIKE :keyword)
-          AND (:status IS NULL OR s.status = :status)
-        ORDER BY s.id DESC
-    """)
+                SELECT s FROM Supplier s
+                WHERE (:keyword IS NULL OR LOWER(s.name) LIKE :keyword OR LOWER(s.email) LIKE :keyword OR LOWER(s.phone) LIKE :keyword)
+                  AND (:status IS NULL OR s.status = :status)
+                ORDER BY s.id DESC
+            """)
     List<Supplier> findSuppliersInitial(
             @Param("keyword") String keyword,
             @Param("status") String status,
@@ -34,12 +34,12 @@ public interface SupplierRepository extends JpaRepository<Supplier, UUID> {
     );
 
     @Query("""
-        SELECT s FROM Supplier s
-        WHERE s.id < :cursor
-          AND (:keyword IS NULL OR LOWER(s.name) LIKE :keyword OR LOWER(s.email) LIKE :keyword OR LOWER(s.phone) LIKE :keyword)
-          AND (:status IS NULL OR s.status = :status)
-        ORDER BY s.id DESC
-    """)
+                SELECT s FROM Supplier s
+                WHERE s.id < :cursor
+                  AND (:keyword IS NULL OR LOWER(s.name) LIKE :keyword OR LOWER(s.email) LIKE :keyword OR LOWER(s.phone) LIKE :keyword)
+                  AND (:status IS NULL OR s.status = :status)
+                ORDER BY s.id DESC
+            """)
     List<Supplier> findSuppliersAfterCursor(
             @Param("cursor") UUID cursor,
             @Param("keyword") String keyword,

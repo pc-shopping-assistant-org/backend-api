@@ -7,7 +7,6 @@ import com.ecm.server.config.security.UserPrincipal;
 import com.ecm.server.dto.request.CreateDiscountRequest;
 import com.ecm.server.dto.request.DiscountFilterRequest;
 import com.ecm.server.dto.request.UpdateDiscountRequest;
-import com.ecm.server.dto.request.UpdateUserStatusRequest;
 import com.ecm.server.dto.response.DiscountDetailResponse;
 import com.ecm.server.dto.response.DiscountSummaryResponse;
 import com.ecm.server.service.AdminDiscountService;
@@ -17,16 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 

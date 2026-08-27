@@ -13,14 +13,14 @@ import java.util.UUID;
 public interface CategoryAttributeGroupRepository extends JpaRepository<CategoryAttributeGroup, UUID> {
 
     @Query("""
-        SELECT DISTINCT g FROM CategoryAttributeGroup g
-        LEFT JOIN FETCH g.categoryAttributes ca
-        LEFT JOIN FETCH ca.attribute a
-        WHERE g.category.id = :categoryId
-          AND g.status != :excludedStatus
-          AND (ca.status IS NULL OR ca.status != :excludedStatus)
-        ORDER BY g.displayOrder ASC
-    """)
+                SELECT DISTINCT g FROM CategoryAttributeGroup g
+                LEFT JOIN FETCH g.categoryAttributes ca
+                LEFT JOIN FETCH ca.attribute a
+                WHERE g.category.id = :categoryId
+                  AND g.status != :excludedStatus
+                  AND (ca.status IS NULL OR ca.status != :excludedStatus)
+                ORDER BY g.displayOrder ASC
+            """)
     List<CategoryAttributeGroup> findGroupsWithAttributesByCategoryId(
             @Param("categoryId") UUID categoryId,
             @Param("excludedStatus") String excludedStatus

@@ -25,14 +25,14 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
     boolean existsByPhone(String phone);
 
     @Query("""
-        SELECT e FROM Employee e
-        JOIN FETCH e.account a
-        LEFT JOIN FETCH a.role r
-        WHERE (:keyword IS NULL OR LOWER(e.fullName) LIKE :keyword OR LOWER(e.email) LIKE :keyword OR LOWER(e.phone) LIKE :keyword OR LOWER(a.username) LIKE :keyword)
-          AND (:roleName IS NULL OR r.name = :roleName)
-          AND (:status IS NULL OR e.status = :status)
-        ORDER BY e.id DESC
-    """)
+                SELECT e FROM Employee e
+                JOIN FETCH e.account a
+                LEFT JOIN FETCH a.role r
+                WHERE (:keyword IS NULL OR LOWER(e.fullName) LIKE :keyword OR LOWER(e.email) LIKE :keyword OR LOWER(e.phone) LIKE :keyword OR LOWER(a.username) LIKE :keyword)
+                  AND (:roleName IS NULL OR r.name = :roleName)
+                  AND (:status IS NULL OR e.status = :status)
+                ORDER BY e.id DESC
+            """)
     List<Employee> findEmployeesInitial(
             @Param("keyword") String keyword,
             @Param("roleName") String roleName,
@@ -41,15 +41,15 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
     );
 
     @Query("""
-        SELECT e FROM Employee e
-        JOIN FETCH e.account a
-        LEFT JOIN FETCH a.role r
-        WHERE e.id < :cursor
-          AND (:keyword IS NULL OR LOWER(e.fullName) LIKE :keyword OR LOWER(e.email) LIKE :keyword OR LOWER(e.phone) LIKE :keyword OR LOWER(a.username) LIKE :keyword)
-          AND (:roleName IS NULL OR r.name = :roleName)
-          AND (:status IS NULL OR e.status = :status)
-        ORDER BY e.id DESC
-    """)
+                SELECT e FROM Employee e
+                JOIN FETCH e.account a
+                LEFT JOIN FETCH a.role r
+                WHERE e.id < :cursor
+                  AND (:keyword IS NULL OR LOWER(e.fullName) LIKE :keyword OR LOWER(e.email) LIKE :keyword OR LOWER(e.phone) LIKE :keyword OR LOWER(a.username) LIKE :keyword)
+                  AND (:roleName IS NULL OR r.name = :roleName)
+                  AND (:status IS NULL OR e.status = :status)
+                ORDER BY e.id DESC
+            """)
     List<Employee> findEmployeesAfterCursor(
             @Param("cursor") UUID cursor,
             @Param("keyword") String keyword,

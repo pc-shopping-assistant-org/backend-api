@@ -1,11 +1,7 @@
 package com.ecm.server.service.impl;
 
 import com.ecm.server.dto.request.AnalyticsDateRangeRequest;
-import com.ecm.server.dto.response.DashboardOverviewResponse;
-import com.ecm.server.dto.response.OrderStatusStatResponse;
-import com.ecm.server.dto.response.RevenueChartDataResponse;
-import com.ecm.server.dto.response.RevenueChartPointResponse;
-import com.ecm.server.dto.response.TopSellingProductResponse;
+import com.ecm.server.dto.response.*;
 import com.ecm.server.model.Order;
 import com.ecm.server.repository.CustomerRepository;
 import com.ecm.server.repository.OrderItemRepository;
@@ -23,12 +19,7 @@ import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.WeekFields;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -151,7 +142,8 @@ public class AdminAnalyticsServiceImpl implements AdminAnalyticsService {
             LocalDate orderLocalDate = LocalDate.ofInstant(order.getOrderTime(), ZoneOffset.UTC);
             String label = switch (period) {
                 case "MONTH" -> YearMonth.from(orderLocalDate).format(MONTH_FORMATTER);
-                case "WEEK" -> orderLocalDate.getYear() + "-W" + String.format("%02d", orderLocalDate.get(weekFields.weekOfWeekBasedYear()));
+                case "WEEK" ->
+                        orderLocalDate.getYear() + "-W" + String.format("%02d", orderLocalDate.get(weekFields.weekOfWeekBasedYear()));
                 default -> orderLocalDate.format(DAY_FORMATTER);
             };
 

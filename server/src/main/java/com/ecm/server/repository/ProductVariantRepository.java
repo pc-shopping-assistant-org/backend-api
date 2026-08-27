@@ -20,34 +20,34 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     Optional<ProductVariant> findBySku(String sku);
 
     @Query("""
-        SELECT v FROM ProductVariant v
-        LEFT JOIN FETCH v.product
-        WHERE v.id = :id
-    """)
+                SELECT v FROM ProductVariant v
+                LEFT JOIN FETCH v.product
+                WHERE v.id = :id
+            """)
     Optional<ProductVariant> findByIdWithProduct(@Param("id") UUID id);
 
     @Query("""
-        SELECT DISTINCT v FROM ProductVariant v
-        LEFT JOIN FETCH v.product
-        LEFT JOIN FETCH v.images img
-        LEFT JOIN FETCH v.variantOptions vo
-        LEFT JOIN FETCH vo.option o
-        WHERE v.product.id = :productId
-          AND v.status != :status
-        ORDER BY v.price ASC
-    """)
+                SELECT DISTINCT v FROM ProductVariant v
+                LEFT JOIN FETCH v.product
+                LEFT JOIN FETCH v.images img
+                LEFT JOIN FETCH v.variantOptions vo
+                LEFT JOIN FETCH vo.option o
+                WHERE v.product.id = :productId
+                  AND v.status != :status
+                ORDER BY v.price ASC
+            """)
     List<ProductVariant> findByProductIdWithDetails(@Param("productId") UUID productId, @Param("status") String status);
 
     @Query("""
-        SELECT DISTINCT v FROM ProductVariant v
-        LEFT JOIN FETCH v.product
-        LEFT JOIN FETCH v.images img
-        LEFT JOIN FETCH v.variantOptions vo
-        LEFT JOIN FETCH vo.option o
-        WHERE v.id = :id
-          AND v.product.id = :productId
-          AND v.status != :status
-    """)
+                SELECT DISTINCT v FROM ProductVariant v
+                LEFT JOIN FETCH v.product
+                LEFT JOIN FETCH v.images img
+                LEFT JOIN FETCH v.variantOptions vo
+                LEFT JOIN FETCH vo.option o
+                WHERE v.id = :id
+                  AND v.product.id = :productId
+                  AND v.status != :status
+            """)
     Optional<ProductVariant> findByIdAndProductIdWithDetails(
             @Param("id") UUID id,
             @Param("productId") UUID productId,
@@ -55,14 +55,14 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     );
 
     @Query("""
-        SELECT DISTINCT v FROM ProductVariant v
-        LEFT JOIN FETCH v.product
-        LEFT JOIN FETCH v.images img
-        LEFT JOIN FETCH v.variantOptions vo
-        LEFT JOIN FETCH vo.option o
-        WHERE v.id = :id
-          AND v.status != :status
-    """)
+                SELECT DISTINCT v FROM ProductVariant v
+                LEFT JOIN FETCH v.product
+                LEFT JOIN FETCH v.images img
+                LEFT JOIN FETCH v.variantOptions vo
+                LEFT JOIN FETCH vo.option o
+                WHERE v.id = :id
+                  AND v.status != :status
+            """)
     Optional<ProductVariant> findByIdWithDetails(@Param("id") UUID id, @Param("status") String status);
 
     long countByProductId(UUID productId);

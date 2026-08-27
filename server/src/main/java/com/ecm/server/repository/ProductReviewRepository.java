@@ -22,14 +22,14 @@ public interface ProductReviewRepository extends JpaRepository<ProductReview, UU
     Optional<ProductReview> findByCustomerIdAndProductIdAndStatusNot(UUID customerId, UUID productId, String status);
 
     @Query("""
-        SELECT pr FROM ProductReview pr
-        JOIN FETCH pr.customer c
-        JOIN FETCH pr.product p
-        WHERE pr.product.id = :productId
-          AND pr.status = 'ACTIVE'
-          AND (:rating IS NULL OR pr.rating = :rating)
-        ORDER BY pr.id DESC
-    """)
+                SELECT pr FROM ProductReview pr
+                JOIN FETCH pr.customer c
+                JOIN FETCH pr.product p
+                WHERE pr.product.id = :productId
+                  AND pr.status = 'ACTIVE'
+                  AND (:rating IS NULL OR pr.rating = :rating)
+                ORDER BY pr.id DESC
+            """)
     List<ProductReview> findActiveReviewsInitial(
             @Param("productId") UUID productId,
             @Param("rating") Integer rating,
@@ -37,15 +37,15 @@ public interface ProductReviewRepository extends JpaRepository<ProductReview, UU
     );
 
     @Query("""
-        SELECT pr FROM ProductReview pr
-        JOIN FETCH pr.customer c
-        JOIN FETCH pr.product p
-        WHERE pr.id < :cursor
-          AND pr.product.id = :productId
-          AND pr.status = 'ACTIVE'
-          AND (:rating IS NULL OR pr.rating = :rating)
-        ORDER BY pr.id DESC
-    """)
+                SELECT pr FROM ProductReview pr
+                JOIN FETCH pr.customer c
+                JOIN FETCH pr.product p
+                WHERE pr.id < :cursor
+                  AND pr.product.id = :productId
+                  AND pr.status = 'ACTIVE'
+                  AND (:rating IS NULL OR pr.rating = :rating)
+                ORDER BY pr.id DESC
+            """)
     List<ProductReview> findActiveReviewsAfterCursor(
             @Param("cursor") UUID cursor,
             @Param("productId") UUID productId,
@@ -63,12 +63,12 @@ public interface ProductReviewRepository extends JpaRepository<ProductReview, UU
     List<Object[]> getRatingDistribution(@Param("productId") UUID productId);
 
     @Query("""
-        SELECT COUNT(oi) > 0 FROM OrderItem oi
-        JOIN oi.order o
-        JOIN oi.productVariant pv
-        WHERE o.customer.id = :customerId
-          AND pv.product.id = :productId
-          AND o.status = 'COMPLETED'
-    """)
+                SELECT COUNT(oi) > 0 FROM OrderItem oi
+                JOIN oi.order o
+                JOIN oi.productVariant pv
+                WHERE o.customer.id = :customerId
+                  AND pv.product.id = :productId
+                  AND o.status = 'COMPLETED'
+            """)
     boolean hasPurchasedProduct(@Param("customerId") UUID customerId, @Param("productId") UUID productId);
 }
