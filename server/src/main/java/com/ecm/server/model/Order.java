@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,6 +18,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -36,14 +39,16 @@ public class Order {
     @JoinColumn(name = "customer_id")
     private Customer customer;
 
-    @Column(name = "discount_id")
-    private UUID discountId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "discount_id")
+    private Discount discount;
 
     @Column(name = "total_amount", nullable = false)
     private Long totalAmount;
 
     @Column(name = "ship_amount", nullable = false)
-    private Integer shipAmount;
+    @Builder.Default
+    private Integer shipAmount = 0;
 
     @Column(name = "discount_amount", nullable = false)
     @Builder.Default
@@ -70,7 +75,7 @@ public class Order {
 
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
-    private String status = "PENDING";
+    private String status = "PENDING"; // PENDING, CONFIRM, SHIPPING, COMPLETED, CANCELLED, DELETED
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -85,4 +90,12 @@ public class Order {
 
     @Column(name = "updated_by")
     private UUID updatedBy;
+
+    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<OrderItem> orderItems = new LinkedHashSet<>();
+
+    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<Payment> payments = new LinkedHashSet<>();
 }

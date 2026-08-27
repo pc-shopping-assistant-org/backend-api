@@ -14,18 +14,19 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "order_items")
+@Table(name = "payments")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderItem {
+public class Payment {
 
     @Id
     @GeneratedValue
@@ -35,29 +36,30 @@ public class OrderItem {
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_variant_id", nullable = false)
-    private ProductVariant productVariant;
+    @Column(name = "method", nullable = false, length = 100)
+    private String method; // COD, VNPAY, MOMO, SEPAY, BANK_TRANSFER
 
-    @Column(name = "quantity", nullable = false)
-    private int quantity;
+    @Column(name = "paid_at")
+    private Instant paidAt;
 
-    @Column(name = "unit_amount", nullable = false)
-    private int unitAmount;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "discount_id")
-    private Discount discount;
-
-    @Column(name = "discount_amount", nullable = false)
-    @Builder.Default
-    private int discountAmount = 0;
+    @Column(name = "transaction_code", unique = true, length = 100)
+    private String transactionCode;
 
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
-    private String status = "ACTIVE"; // ACTIVE, CANCELLED, DELETED
+    private String status = "PENDING"; // PENDING, PAID, FAILED
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    @Column(name = "created_by")
+    private UUID createdBy;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @Column(name = "updated_by")
+    private UUID updatedBy;
 }

@@ -20,7 +20,15 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     Optional<ProductVariant> findBySku(String sku);
 
     @Query("""
+        SELECT v FROM ProductVariant v
+        LEFT JOIN FETCH v.product
+        WHERE v.id = :id
+    """)
+    Optional<ProductVariant> findByIdWithProduct(@Param("id") UUID id);
+
+    @Query("""
         SELECT DISTINCT v FROM ProductVariant v
+        LEFT JOIN FETCH v.product
         LEFT JOIN FETCH v.images img
         LEFT JOIN FETCH v.variantOptions vo
         LEFT JOIN FETCH vo.option o
@@ -32,6 +40,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     @Query("""
         SELECT DISTINCT v FROM ProductVariant v
+        LEFT JOIN FETCH v.product
         LEFT JOIN FETCH v.images img
         LEFT JOIN FETCH v.variantOptions vo
         LEFT JOIN FETCH vo.option o
@@ -47,6 +56,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     @Query("""
         SELECT DISTINCT v FROM ProductVariant v
+        LEFT JOIN FETCH v.product
         LEFT JOIN FETCH v.images img
         LEFT JOIN FETCH v.variantOptions vo
         LEFT JOIN FETCH vo.option o
