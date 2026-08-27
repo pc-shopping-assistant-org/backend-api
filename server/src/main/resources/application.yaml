@@ -36,6 +36,13 @@ spring:
         order_inserts: true
         order_updates: true
 
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 5000ms
+
   # Flyway Migration Configuration
   flyway:
     enabled: true
@@ -43,6 +50,12 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
     validate-on-migrate: true
+
+# JWT Security Configuration
+jwt:
+  secret-key: ${JWT_SECRET_KEY:dGhpc19pc19hX3Zlcnlfc2VjdXJlX2tleV9mb3Jfand0X3NpZ25pbmdfYXV0aGVudGljYXRpb25fMjAyNg==}
+  access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION:86400000} # 24 hours
+  refresh-token-expiration-ms: ${JWT_REFRESH_EXPIRATION:604800000} # 7 days
 
 # Spring Boot Actuator Configuration
 management:

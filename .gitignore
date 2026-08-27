@@ -1,0 +1,40 @@
+# Documentation
+docs/
+*.md.bak
+
+# Environment & Secrets
+.env
+.env.local
+*.env
+
+# Build outputs
+target/
+build/
+*.jar
+*.war
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IDE & Editor files
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+.springBeans
+.sts4-cache
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# Logs & Temporary files
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
