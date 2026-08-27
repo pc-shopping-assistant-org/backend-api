@@ -26,6 +26,7 @@ public class OtpServiceImpl implements OtpService {
 
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final com.ecm.server.service.EmailService emailService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Override
@@ -37,8 +38,9 @@ public class OtpServiceImpl implements OtpService {
         String key = buildOtpKey(email, purpose);
         redisTemplate.opsForValue().set(key, otp, Duration.ofMinutes(OTP_TTL_MINUTES));
 
-        // 3. Log OTP for local development and send email notification
+        // 3. Dispatch OTP via email service and log for development
         log.info("Generated OTP for [{}] with purpose [{}]: {}", email, purpose, otp);
+        emailService.sendOtpEmail(email, otp, purpose);
         return otp;
     }
 

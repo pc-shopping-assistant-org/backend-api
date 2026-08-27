@@ -22,6 +22,6 @@ public class VerifyOtpRequest {
     @Pattern(regexp = "^[0-9]{6}$", message = "OTP must be a 6-digit number")
     private String otp;
 
-    @NotBlank(message = "Purpose is required")
-    private String purpose; // REGISTRATION, FORGOT_PASSWORD
+    @Builder.Default
+    private String purpose = "REGISTRATION"; // Default to REGISTRATION if not provided
 }

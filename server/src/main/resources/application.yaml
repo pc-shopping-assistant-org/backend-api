@@ -43,6 +43,23 @@ spring:
       port: ${REDIS_PORT:6379}
       timeout: 5000ms
 
+  # Mail Server Configuration
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
   # Flyway Migration Configuration
   flyway:
     enabled: true
@@ -59,6 +76,9 @@ jwt:
 
 # Spring Boot Actuator Configuration
 management:
+  health:
+    mail:
+      enabled: false
   endpoints:
     web:
       exposure:
