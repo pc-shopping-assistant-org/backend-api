@@ -59,11 +59,12 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").permitAll()
 
                         // Public Catalog Browsing Endpoints
-                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/brands/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/attributes/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/discounts").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/categories", "/api/v1/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/brands", "/api/v1/brands/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/attributes", "/api/v1/attributes/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/options", "/api/v1/options/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/discounts", "/api/v1/discounts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/*/reviews").permitAll()
                         .requestMatchers("/api/v1/ai/**").permitAll()
 

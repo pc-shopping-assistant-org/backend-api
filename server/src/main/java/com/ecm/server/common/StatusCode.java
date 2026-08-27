@@ -53,6 +53,9 @@ public enum StatusCode {
     ATTRIBUTE_NOT_FOUND(40409, "Attribute definition not found", HttpStatus.NOT_FOUND),
     DISCOUNT_NOT_FOUND(40410, "Discount coupon not found", HttpStatus.NOT_FOUND),
     ORDER_NOT_FOUND(40411, "Order not found", HttpStatus.NOT_FOUND),
+    OPTION_NOT_FOUND(40412, "Option not found", HttpStatus.NOT_FOUND),
+    CATEGORY_GROUP_NOT_FOUND(40413, "Category attribute group not found", HttpStatus.NOT_FOUND),
+    CATEGORY_ATTRIBUTE_NOT_FOUND(40414, "Category attribute assignment not found", HttpStatus.NOT_FOUND),
 
     // =====================================================================
     // 5. Conflict & Business Rule Codes (409xx, 422xx)

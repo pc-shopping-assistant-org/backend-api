@@ -17,6 +17,8 @@ import com.ecm.server.repository.OrderRepository;
 import com.ecm.server.service.AdminCustomerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,13 +44,14 @@ public class AdminCustomerServiceImpl implements AdminCustomerService {
         UUID cursorUuid = (request.getCursor() != null && !request.getCursor().isBlank())
                 ? UUID.fromString(request.getCursor())
                 : null;
+        String keywordPattern = (request.getKeyword() != null && !request.getKeyword().isBlank())
+                ? "%" + request.getKeyword().trim().toLowerCase() + "%"
+                : null;
 
-        List<Customer> customers = customerRepository.findCustomersByCursor(
-                cursorUuid,
-                request.getKeyword(),
-                request.getStatus(),
-                queryLimit
-        );
+        Pageable pageable = PageRequest.of(0, queryLimit);
+        List<Customer> customers = (cursorUuid == null)
+                ? customerRepository.findCustomersInitial(keywordPattern, request.getStatus(), pageable)
+                : customerRepository.findCustomersAfterCursor(cursorUuid, keywordPattern, request.getStatus(), pageable);
 
         // 2. Transform customer entities to DTOs via MapStruct with order statistics
         List<CustomerDetailResponse> dtoList = customers.stream()
@@ -102,18 +105,21 @@ public class AdminCustomerServiceImpl implements AdminCustomerService {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(StatusCode.CUSTOMER_NOT_FOUND));
 
-        // 2. Synchronize status across customer and account entities
-        String newStatus = request.getStatus().toUpperCase();
-        customer.setStatus(newStatus);
+        // 2. Harmonize status codes between customer profile and account tables
+        String rawStatus = request.getStatus().toUpperCase();
+        String profileStatus = "LOCKED".equals(rawStatus) ? "BLOCKED" : rawStatus;
+        String accountStatus = "BLOCKED".equals(rawStatus) ? "LOCKED" : rawStatus;
+
+        customer.setStatus(profileStatus);
         customerRepository.save(customer);
 
         Account account = customer.getAccount();
         if (account != null) {
-            account.setStatus(newStatus);
+            account.setStatus(accountStatus);
             accountRepository.save(account);
         }
 
         // 3. Log customer status update event
-        log.info("Updated customer [{}] status to [{}] with reason: {}", id, newStatus, request.getReason());
+        log.info("Updated customer [{}] status to [{}] with reason: {}", id, profileStatus, request.getReason());
     }
 }

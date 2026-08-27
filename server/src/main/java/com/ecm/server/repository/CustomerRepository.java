@@ -1,6 +1,7 @@
 package com.ecm.server.repository;
 
 import com.ecm.server.model.Customer;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -27,16 +28,29 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
         SELECT c FROM Customer c
         JOIN FETCH c.account a
         LEFT JOIN FETCH a.role r
-        WHERE (:cursor IS NULL OR c.id < :cursor)
-          AND (:keyword IS NULL OR LOWER(c.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.phone) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(a.username) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        WHERE (:keyword IS NULL OR LOWER(c.fullName) LIKE :keyword OR LOWER(c.email) LIKE :keyword OR LOWER(c.phone) LIKE :keyword OR LOWER(a.username) LIKE :keyword)
           AND (:status IS NULL OR c.status = :status)
         ORDER BY c.id DESC
-        LIMIT :queryLimit
     """)
-    List<Customer> findCustomersByCursor(
+    List<Customer> findCustomersInitial(
+            @Param("keyword") String keyword,
+            @Param("status") String status,
+            Pageable pageable
+    );
+
+    @Query("""
+        SELECT c FROM Customer c
+        JOIN FETCH c.account a
+        LEFT JOIN FETCH a.role r
+        WHERE c.id < :cursor
+          AND (:keyword IS NULL OR LOWER(c.fullName) LIKE :keyword OR LOWER(c.email) LIKE :keyword OR LOWER(c.phone) LIKE :keyword OR LOWER(a.username) LIKE :keyword)
+          AND (:status IS NULL OR c.status = :status)
+        ORDER BY c.id DESC
+    """)
+    List<Customer> findCustomersAfterCursor(
             @Param("cursor") UUID cursor,
             @Param("keyword") String keyword,
             @Param("status") String status,
-            @Param("queryLimit") int queryLimit
+            Pageable pageable
     );
 }

@@ -18,6 +18,8 @@ import com.ecm.server.repository.RoleRepository;
 import com.ecm.server.service.AdminEmployeeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,14 +50,14 @@ public class AdminEmployeeServiceImpl implements AdminEmployeeService {
         UUID cursorUuid = (request.getCursor() != null && !request.getCursor().isBlank())
                 ? UUID.fromString(request.getCursor())
                 : null;
+        String keywordPattern = (request.getKeyword() != null && !request.getKeyword().isBlank())
+                ? "%" + request.getKeyword().trim().toLowerCase() + "%"
+                : null;
 
-        List<Employee> employees = employeeRepository.findEmployeesByCursor(
-                cursorUuid,
-                request.getKeyword(),
-                request.getRoleName(),
-                request.getStatus(),
-                queryLimit
-        );
+        Pageable pageable = PageRequest.of(0, queryLimit);
+        List<Employee> employees = (cursorUuid == null)
+                ? employeeRepository.findEmployeesInitial(keywordPattern, request.getRoleName(), request.getStatus(), pageable)
+                : employeeRepository.findEmployeesAfterCursor(cursorUuid, keywordPattern, request.getRoleName(), request.getStatus(), pageable);
 
         // 2. Transform entity list to DTO list via MapStruct
         List<EmployeeDetailResponse> dtoList = employees.stream()
@@ -163,18 +165,21 @@ public class AdminEmployeeServiceImpl implements AdminEmployeeService {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(StatusCode.EMPLOYEE_NOT_FOUND));
 
-        // 2. Synchronize status across employee and account entities
-        String newStatus = request.getStatus().toUpperCase();
-        employee.setStatus(newStatus);
+        // 2. Harmonize status codes between employee profile and account tables
+        String rawStatus = request.getStatus().toUpperCase();
+        String profileStatus = "LOCKED".equals(rawStatus) ? "BLOCKED" : rawStatus;
+        String accountStatus = "BLOCKED".equals(rawStatus) ? "LOCKED" : rawStatus;
+
+        employee.setStatus(profileStatus);
         employeeRepository.save(employee);
 
         Account account = employee.getAccount();
         if (account != null) {
-            account.setStatus(newStatus);
+            account.setStatus(accountStatus);
             accountRepository.save(account);
         }
 
         // 3. Log status modification event
-        log.info("Updated employee [{}] status to [{}] with reason: {}", id, newStatus, request.getReason());
+        log.info("Updated employee [{}] status to [{}] with reason: {}", id, profileStatus, request.getReason());
     }
 }
