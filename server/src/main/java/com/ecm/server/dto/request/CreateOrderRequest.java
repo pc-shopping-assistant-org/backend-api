@@ -38,8 +38,8 @@ public class CreateOrderRequest {
 
     @NotBlank(message = "Payment method is required")
     @Pattern(
-        regexp = "^(?i)(COD|VNPAY|MOMO|SEPAY|BANK_TRANSFER)$",
-        message = "Payment method must be one of: COD, VNPAY, MOMO, SEPAY, BANK_TRANSFER"
+        regexp = "^(?i)(COD|STRIPE|CREDIT_CARD|VNPAY|MOMO|SEPAY|BANK_TRANSFER)$",
+        message = "Payment method must be one of: COD, STRIPE, CREDIT_CARD, VNPAY, MOMO, SEPAY, BANK_TRANSFER"
     )
     private String paymentMethod;
 }

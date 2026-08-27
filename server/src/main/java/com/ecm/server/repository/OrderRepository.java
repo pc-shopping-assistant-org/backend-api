@@ -68,7 +68,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
         LEFT JOIN FETCH o.customer c
         LEFT JOIN FETCH c.account
         LEFT JOIN FETCH o.discount
-        WHERE (:customerId IS NULL OR o.customer.id = :customerId)
+        WHERE (CAST(:customerId AS uuid) IS NULL OR o.customer.id = :customerId)
           AND (:status IS NULL OR o.status = :status)
           AND (CAST(:fromDate AS timestamp) IS NULL OR o.orderTime >= :fromDate)
           AND (CAST(:toDate AS timestamp) IS NULL OR o.orderTime <= :toDate)
@@ -88,7 +88,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
         LEFT JOIN FETCH c.account
         LEFT JOIN FETCH o.discount
         WHERE o.id < :cursor
-          AND (:customerId IS NULL OR o.customer.id = :customerId)
+          AND (CAST(:customerId AS uuid) IS NULL OR o.customer.id = :customerId)
           AND (:status IS NULL OR o.status = :status)
           AND (CAST(:fromDate AS timestamp) IS NULL OR o.orderTime >= :fromDate)
           AND (CAST(:toDate AS timestamp) IS NULL OR o.orderTime <= :toDate)
