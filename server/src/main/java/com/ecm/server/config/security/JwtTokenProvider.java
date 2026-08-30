@@ -9,10 +9,14 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -29,18 +33,28 @@ public class JwtTokenProvider {
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateAccessToken(UUID accountId, String username, String role) {
+    public String generateAccessToken(UUID accountId, String username, String role, UUID employeeId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtProperties.getAccessTokenExpirationMs());
 
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(username)
-                .claim("accountId", accountId.toString())
+                .claim("accountId", accountId != null ? accountId.toString() : null)
                 .claim("role", role)
+                .claim("status", "ACTIVE")
                 .issuedAt(now)
                 .expiration(expiryDate)
-                .signWith(key)
-                .compact();
+                .signWith(key);
+
+        if (employeeId != null) {
+            builder.claim("employeeId", employeeId.toString());
+        }
+
+        return builder.compact();
+    }
+
+    public String generateAccessToken(UUID accountId, String username, String role) {
+        return generateAccessToken(accountId, username, role, null);
     }
 
     public String generateRefreshToken(UUID accountId, String username) {
@@ -49,12 +63,40 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .subject(username)
-                .claim("accountId", accountId.toString())
+                .claim("accountId", accountId != null ? accountId.toString() : null)
                 .claim("type", "REFRESH")
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(key)
                 .compact();
+    }
+
+    public UserPrincipal getUserPrincipalFromToken(String token) {
+        Claims claims = getClaimsFromToken(token);
+        String username = claims.getSubject();
+        String accountIdStr = claims.get("accountId", String.class);
+        String employeeIdStr = claims.get("employeeId", String.class);
+        String role = claims.get("role", String.class);
+        String status = claims.get("status", String.class);
+        if (status == null) {
+            status = "ACTIVE";
+        }
+
+        UUID accountId = accountIdStr != null ? UUID.fromString(accountIdStr) : null;
+        UUID employeeId = employeeIdStr != null ? UUID.fromString(employeeIdStr) : null;
+
+        List<GrantedAuthority> authorities = role != null
+                ? Collections.singletonList(new SimpleGrantedAuthority(role))
+                : Collections.emptyList();
+
+        return UserPrincipal.builder()
+                .accountId(accountId)
+                .employeeId(employeeId)
+                .username(username)
+                .role(role)
+                .status(status)
+                .authorities(authorities)
+                .build();
     }
 
     public String getUsernameFromToken(String token) {

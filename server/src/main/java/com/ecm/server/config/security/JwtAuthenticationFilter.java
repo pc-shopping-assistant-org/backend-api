@@ -4,31 +4,33 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    public static final String AUTHORIZATION_HEADER = "Authorization";
+    public static final String BEARER_PREFIX = "Bearer ";
     public static final String BLACKLIST_TOKEN_PREFIX = "token:blacklist:";
-    private static final String BEARER_PREFIX = "Bearer ";
-    private static final String AUTHORIZATION_HEADER = "Authorization";
+    public static final String BLOCKED_ACCOUNT_PREFIX = "account:blocked:";
+
     private final JwtTokenProvider tokenProvider;
-    private final CustomUserDetailsService userDetailsService;
     private final StringRedisTemplate redisTemplate;
+    private final com.ecm.server.repository.AccountRepository accountRepository;
 
     @Override
     protected void doFilterInternal(
@@ -40,22 +42,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = getJwtFromRequest(request);
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
-                // Check if token is in Redis blacklist (e.g. user logged out)
-                Boolean isBlacklisted = redisTemplate.hasKey(BLACKLIST_TOKEN_PREFIX + jwt);
-                if (Boolean.TRUE.equals(isBlacklisted)) {
+                // 1. Check if token is in Redis blacklist (with fail-open resilience)
+                if (isTokenBlacklisted(jwt)) {
                     log.warn("Attempt to authenticate with blacklisted token");
                     filterChain.doFilter(request, response);
                     return;
                 }
 
-                String username = tokenProvider.getUsernameFromToken(jwt);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                // 2. Decode UserPrincipal directly from JWT claims in memory (0 DB queries)
+                UserPrincipal userPrincipal = tokenProvider.getUserPrincipalFromToken(jwt);
 
-                if (userDetails != null && userDetails.isEnabled() && userDetails.isAccountNonLocked()) {
+                // 3. Check if account is in Redis blocked list (with fail-open resilience)
+                if (userPrincipal.getAccountId() != null && isAccountBlocked(userPrincipal.getAccountId())) {
+                    log.warn("Attempt to authenticate with blocked account: {}", userPrincipal.getAccountId());
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
+                // 4. Set in-memory authentication in SecurityContext
+                if (userPrincipal.isEnabled() && userPrincipal.isAccountNonLocked()) {
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            userDetails,
+                            userPrincipal,
                             null,
-                            userDetails.getAuthorities()
+                            userPrincipal.getAuthorities()
                     );
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -66,6 +75,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isTokenBlacklisted(String token) {
+        try {
+            Boolean isBlacklisted = redisTemplate.hasKey(BLACKLIST_TOKEN_PREFIX + token);
+            return Boolean.TRUE.equals(isBlacklisted);
+        } catch (Exception ex) {
+            log.warn("Redis unavailable during token blacklist check. Failing open: {}", ex.getMessage());
+            return false;
+        }
+    }
+
+    private boolean isAccountBlocked(UUID accountId) {
+        try {
+            Boolean isBlocked = redisTemplate.hasKey(BLOCKED_ACCOUNT_PREFIX + accountId);
+            return Boolean.TRUE.equals(isBlocked);
+        } catch (Exception ex) {
+            log.warn("Redis unavailable during account block check. Fallback querying DB PostgreSQL for account [{}]: {}", accountId, ex.getMessage());
+            try {
+                return accountRepository.findById(accountId)
+                        .map(account -> !"ACTIVE".equalsIgnoreCase(account.getStatus()))
+                        .orElse(true);
+            } catch (Exception dbEx) {
+                log.error("DB fallback check failed for account [{}]: {}", accountId, dbEx.getMessage());
+                return false;
+            }
+        }
     }
 
     private String getJwtFromRequest(HttpServletRequest request) {

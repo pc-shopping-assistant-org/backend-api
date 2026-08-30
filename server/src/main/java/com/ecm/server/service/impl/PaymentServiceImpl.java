@@ -108,8 +108,12 @@ public class PaymentServiceImpl implements PaymentService {
             }
 
             // Save payment intent ID in Redis with 15-minute TTL for idempotency and timeout tracking
-            String redisKey = REDIS_PAYMENT_INTENT_PREFIX + transactionCode;
-            redisTemplate.opsForValue().set(redisKey, order.getId().toString(), Duration.ofMinutes(PAYMENT_INTENT_TTL_MINUTES));
+            try {
+                String redisKey = REDIS_PAYMENT_INTENT_PREFIX + transactionCode;
+                redisTemplate.opsForValue().set(redisKey, order.getId().toString(), Duration.ofMinutes(PAYMENT_INTENT_TTL_MINUTES));
+            } catch (Exception ex) {
+                log.warn("Failed to cache payment intent in Redis: {}", ex.getMessage());
+            }
         } else {
             transactionCode = "COD_" + order.getId().toString().substring(0, 8).toUpperCase();
             clientSecret = "";
@@ -232,7 +236,11 @@ public class PaymentServiceImpl implements PaymentService {
                     }
 
                     // Clean up Redis timeout key
-                    redisTemplate.delete(REDIS_PAYMENT_INTENT_PREFIX + paymentIntentId);
+                    try {
+                        redisTemplate.delete(REDIS_PAYMENT_INTENT_PREFIX + paymentIntentId);
+                    } catch (Exception ex) {
+                        log.warn("Failed to delete payment intent from Redis: {}", ex.getMessage());
+                    }
                     log.info("Successfully processed Stripe payment webhook for intent [{}]", paymentIntentId);
                 }
             }

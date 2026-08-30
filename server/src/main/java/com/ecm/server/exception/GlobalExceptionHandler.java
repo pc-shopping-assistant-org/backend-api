@@ -134,6 +134,26 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle Redis connection failure / timeout outage.
+     */
+    @ExceptionHandler({
+            org.springframework.data.redis.RedisConnectionFailureException.class,
+            org.springframework.data.redis.RedisSystemException.class,
+            org.springframework.dao.QueryTimeoutException.class,
+            io.lettuce.core.RedisException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleRedisException(Exception ex) {
+        log.error("Redis connection outage detected: {}", ex.getMessage());
+
+        StatusCode statusCode = StatusCode.SERVICE_UNAVAILABLE;
+        ApiResponse<Void> response = ApiResponse.error(
+                statusCode,
+                "Cache or session service is temporarily unavailable. Please try again shortly."
+        );
+        return ResponseEntity.status(statusCode.getHttpStatus()).body(response);
+    }
+
+    /**
      * Handle all uncaught runtime exceptions.
      */
     @ExceptionHandler({Exception.class, RuntimeException.class})

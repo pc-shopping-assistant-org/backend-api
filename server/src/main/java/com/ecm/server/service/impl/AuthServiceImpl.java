@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -164,7 +165,10 @@ public class AuthServiceImpl implements AuthService {
         UserSummaryResponse userSummary = buildUserSummary(account);
 
         // 5. Generate JWT tokens
-        String accessToken = tokenProvider.generateAccessToken(account.getId(), account.getUsername(), roleName);
+        UUID employeeId = employeeRepository.findByAccountId(account.getId())
+                .map(com.ecm.server.model.Employee::getId)
+                .orElse(null);
+        String accessToken = tokenProvider.generateAccessToken(account.getId(), account.getUsername(), roleName, employeeId);
         String refreshToken = tokenProvider.generateRefreshToken(account.getId(), account.getUsername());
 
         return AuthResponse.builder()
@@ -194,7 +198,10 @@ public class AuthServiceImpl implements AuthService {
 
         // 3. Re-issue fresh access and refresh token pair
         String roleName = account.getRole() != null ? account.getRole().getName() : ROLE_CUSTOMER;
-        String newAccessToken = tokenProvider.generateAccessToken(account.getId(), account.getUsername(), roleName);
+        UUID employeeId = employeeRepository.findByAccountId(account.getId())
+                .map(com.ecm.server.model.Employee::getId)
+                .orElse(null);
+        String newAccessToken = tokenProvider.generateAccessToken(account.getId(), account.getUsername(), roleName, employeeId);
         String newRefreshToken = tokenProvider.generateRefreshToken(account.getId(), account.getUsername());
         UserSummaryResponse userSummary = buildUserSummary(account);
 
@@ -212,10 +219,14 @@ public class AuthServiceImpl implements AuthService {
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
             String token = bearerToken.substring(BEARER_PREFIX_LENGTH);
             // 2. Compute remaining expiration and place token into Redis Blacklist
-            long remainingTimeMs = tokenProvider.getExpirationTimeMsFromToken(token);
-            if (remainingTimeMs > 0) {
-                String key = JwtAuthenticationFilter.BLACKLIST_TOKEN_PREFIX + token;
-                redisTemplate.opsForValue().set(key, "LOGGED_OUT", Duration.ofMillis(remainingTimeMs));
+            try {
+                long remainingTimeMs = tokenProvider.getExpirationTimeMsFromToken(token);
+                if (remainingTimeMs > 0) {
+                    String key = JwtAuthenticationFilter.BLACKLIST_TOKEN_PREFIX + token;
+                    redisTemplate.opsForValue().set(key, "LOGGED_OUT", Duration.ofMillis(remainingTimeMs));
+                }
+            } catch (Exception ex) {
+                log.warn("Failed to write blacklisted token to Redis during logout: {}", ex.getMessage());
             }
         }
     }

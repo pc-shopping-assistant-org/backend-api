@@ -40,6 +40,7 @@ public class AdminEmployeeServiceImpl implements AdminEmployeeService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
 
     @Override
     @Transactional(readOnly = true)
@@ -177,9 +178,17 @@ public class AdminEmployeeServiceImpl implements AdminEmployeeService {
         if (account != null) {
             account.setStatus(accountStatus);
             accountRepository.save(account);
+
+            // 3. Update Redis blocked blacklist for stateless JWT revocation
+            String blockedKey = "account:blocked:" + account.getId();
+            if ("LOCKED".equalsIgnoreCase(accountStatus) || "BLOCKED".equalsIgnoreCase(accountStatus) || "DELETED".equalsIgnoreCase(accountStatus)) {
+                redisTemplate.opsForValue().set(blockedKey, "BLOCKED", java.time.Duration.ofDays(7));
+            } else if ("ACTIVE".equalsIgnoreCase(accountStatus)) {
+                redisTemplate.delete(blockedKey);
+            }
         }
 
-        // 3. Log status modification event
+        // 4. Log status modification event
         log.info("Updated employee [{}] status to [{}] with reason: {}", id, profileStatus, request.getReason());
     }
 }

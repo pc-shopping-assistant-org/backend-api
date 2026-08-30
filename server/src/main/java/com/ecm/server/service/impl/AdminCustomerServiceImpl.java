@@ -34,6 +34,7 @@ public class AdminCustomerServiceImpl implements AdminCustomerService {
     private final AccountRepository accountRepository;
     private final OrderRepository orderRepository;
     private final UserMapper userMapper;
+    private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
 
     @Override
     @Transactional(readOnly = true)
@@ -117,9 +118,17 @@ public class AdminCustomerServiceImpl implements AdminCustomerService {
         if (account != null) {
             account.setStatus(accountStatus);
             accountRepository.save(account);
+
+            // 3. Update Redis blocked blacklist for stateless JWT revocation
+            String blockedKey = "account:blocked:" + account.getId();
+            if ("LOCKED".equalsIgnoreCase(accountStatus) || "BLOCKED".equalsIgnoreCase(accountStatus) || "DELETED".equalsIgnoreCase(accountStatus)) {
+                redisTemplate.opsForValue().set(blockedKey, "BLOCKED", java.time.Duration.ofDays(7));
+            } else if ("ACTIVE".equalsIgnoreCase(accountStatus)) {
+                redisTemplate.delete(blockedKey);
+            }
         }
 
-        // 3. Log customer status update event
+        // 4. Log customer status update event
         log.info("Updated customer [{}] status to [{}] with reason: {}", id, profileStatus, request.getReason());
     }
 }

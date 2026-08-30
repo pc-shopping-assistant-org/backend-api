@@ -80,7 +80,9 @@ public enum StatusCode {
     // =====================================================================
     INTERNAL_SERVER_ERROR(50000, "An internal server error occurred", HttpStatus.INTERNAL_SERVER_ERROR),
     DATABASE_ERROR(50001, "Database access or persistence failure", HttpStatus.INTERNAL_SERVER_ERROR),
-    EXTERNAL_SERVICE_ERROR(50200, "External service integration failed", HttpStatus.BAD_GATEWAY);
+    CACHE_ERROR(50002, "Cache service failure", HttpStatus.INTERNAL_SERVER_ERROR),
+    EXTERNAL_SERVICE_ERROR(50200, "External service integration failed", HttpStatus.BAD_GATEWAY),
+    SERVICE_UNAVAILABLE(50300, "Service temporarily unavailable, please try again later", HttpStatus.SERVICE_UNAVAILABLE);
 
     private final int code;
     private final String message;
