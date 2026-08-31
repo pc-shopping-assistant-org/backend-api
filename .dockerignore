@@ -1,0 +1,8 @@
+.git
+.github
+.env
+server/.env
+server/target
+target
+*.log
+docs
