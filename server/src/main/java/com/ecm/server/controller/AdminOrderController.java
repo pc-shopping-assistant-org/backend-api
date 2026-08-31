@@ -28,7 +28,7 @@ public class AdminOrderController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<CursorPageResponse<OrderDetailResponse>>> getAdminOrders(
-            @ModelAttribute OrderFilterRequest filter
+            @Valid @ModelAttribute OrderFilterRequest filter
     ) {
         CursorPageResponse<OrderDetailResponse> response = adminOrderService.getAdminOrders(filter);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));
@@ -56,4 +56,5 @@ public class AdminOrderController {
         InvoiceResponse response = adminOrderService.getOrderInvoice(id);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));
     }
+
 }

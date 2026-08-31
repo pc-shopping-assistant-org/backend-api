@@ -66,7 +66,7 @@ class ProductReviewControllerTest {
                                           NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
                 return UserPrincipal.builder()
                         .accountId(testAccountId)
-                        .username("testcustomer")
+                        .username("customer@example.com")
                         .role("ROLE_CUSTOMER")
                         .build();
             }
@@ -102,7 +102,7 @@ class ProductReviewControllerTest {
 
         mockMvc.perform(get("/api/v1/products/{productId}/reviews", productId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.items[0].rating").value(5))
                 .andExpect(jsonPath("$.data.items[0].isVerifiedPurchase").value(true));
     }
@@ -121,7 +121,7 @@ class ProductReviewControllerTest {
 
         mockMvc.perform(get("/api/v1/products/{productId}/reviews/summary", productId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.averageRating").value(4.8))
                 .andExpect(jsonPath("$.data.totalReviews").value(25));
     }
@@ -130,6 +130,7 @@ class ProductReviewControllerTest {
     void createReview_shouldReturnCreatedReview() throws Exception {
         UUID productId = UUID.randomUUID();
         CreateReviewRequest request = CreateReviewRequest.builder()
+                .orderItemId(UUID.randomUUID())
                 .rating(5)
                 .comment("Great battery life!")
                 .build();
@@ -150,7 +151,7 @@ class ProductReviewControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("CREATED"))
                 .andExpect(jsonPath("$.data.rating").value(5));
     }
 
@@ -179,7 +180,7 @@ class ProductReviewControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("UPDATED"))
                 .andExpect(jsonPath("$.data.rating").value(4));
     }
 
@@ -192,6 +193,6 @@ class ProductReviewControllerTest {
 
         mockMvc.perform(delete("/api/v1/products/{productId}/reviews/{reviewId}", productId, reviewId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.message").value("DELETED"));
     }
 }

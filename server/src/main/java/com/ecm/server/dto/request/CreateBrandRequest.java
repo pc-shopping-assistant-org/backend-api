@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -19,5 +21,5 @@ public class CreateBrandRequest {
 
     private String description;
 
-    private String logoUrl;
+    private UUID fileId;
 }

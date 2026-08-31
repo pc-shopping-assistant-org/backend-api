@@ -8,6 +8,7 @@ import com.ecm.server.dto.response.OrderStatusStatResponse;
 import com.ecm.server.dto.response.RevenueChartDataResponse;
 import com.ecm.server.dto.response.TopSellingProductResponse;
 import com.ecm.server.service.AdminAnalyticsService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +34,7 @@ public class AdminAnalyticsController {
 
     @GetMapping("/revenue-chart")
     public ResponseEntity<ApiResponse<RevenueChartDataResponse>> getRevenueChart(
-            @ModelAttribute AnalyticsDateRangeRequest request
+            @Valid @ModelAttribute AnalyticsDateRangeRequest request
     ) {
         RevenueChartDataResponse response = adminAnalyticsService.getRevenueChart(request);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));

@@ -27,7 +27,7 @@ public class AdminCustomerController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<CursorPageResponse<CustomerDetailResponse>>> getCustomers(
-            @ModelAttribute CustomerFilterRequest request
+            @Valid @ModelAttribute CustomerFilterRequest request
     ) {
         CursorPageResponse<CustomerDetailResponse> response = adminCustomerService.getCustomers(request);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));

@@ -68,7 +68,7 @@ class AdminSupplierControllerTest {
                         .param("limit", "10")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.items[0].name").value("Supplier Alpha"));
     }
 
@@ -96,8 +96,7 @@ class AdminSupplierControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.code").value(20100))
+                .andExpect(jsonPath("$.message").value("CREATED"))
                 .andExpect(jsonPath("$.data.name").value("Supplier Beta"));
     }
 }

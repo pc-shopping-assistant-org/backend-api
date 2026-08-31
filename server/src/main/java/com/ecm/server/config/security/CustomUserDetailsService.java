@@ -22,12 +22,12 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final EmployeeRepository employeeRepository;
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Account account = accountRepository.findByUsername(username)
+    public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
+        Account account = accountRepository.findByLoginIdentifier(identifier)
                 .orElseThrow(() -> new BusinessException(StatusCode.INVALID_CREDENTIALS));
 
         UUID employeeId = employeeRepository.findByAccountId(account.getId())
-                .map(Employee::getId)
+                .map(Employee::getAccountId)
                 .orElse(null);
 
         return UserPrincipal.create(account, employeeId);

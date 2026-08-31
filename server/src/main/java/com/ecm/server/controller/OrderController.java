@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +22,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class OrderController {
 
     private final OrderService orderService;
@@ -36,7 +38,7 @@ public class OrderController {
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<CursorPageResponse<OrderDetailResponse>>> getMyOrders(
-            @ModelAttribute OrderFilterRequest filter,
+            @Valid @ModelAttribute OrderFilterRequest filter,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         CursorPageResponse<OrderDetailResponse> response = orderService.getMyOrders(principal.getAccountId(), filter);

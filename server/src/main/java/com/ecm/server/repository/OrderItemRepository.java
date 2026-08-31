@@ -9,24 +9,38 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface OrderItemRepository extends JpaRepository<OrderItem, UUID> {
 
-    long countByProductVariantId(UUID productVariantId);
+    @Query("SELECT COUNT(oi) FROM OrderItem oi WHERE oi.productVariant.id = :productVariantId")
+    long countByProductVariantId(@Param("productVariantId") UUID productVariantId);
 
-    long countByProductVariantProductId(UUID productId);
+    @Query("SELECT COUNT(oi) FROM OrderItem oi WHERE oi.productVariant.product.id = :productId")
+    long countByProductVariantProductId(@Param("productId") UUID productId);
 
-    long countByDiscountId(UUID discountId);
+    @Query("SELECT COUNT(oi) FROM OrderItem oi WHERE oi.itemDiscountRelation.id = :discountId")
+    long countByItemDiscountRelationId(@Param("discountId") UUID discountId);
 
     List<OrderItem> findByOrderId(UUID orderId);
 
     @Query("""
                 SELECT oi FROM OrderItem oi
+                JOIN FETCH oi.order o
+                JOIN FETCH o.customer c
+                JOIN FETCH oi.productVariant pv
+                JOIN FETCH pv.product p
+                WHERE oi.id = :id
+            """)
+    Optional<OrderItem> findByIdWithOrderAndProduct(@Param("id") UUID id);
+
+    @Query("""
+                SELECT oi FROM OrderItem oi
                 LEFT JOIN FETCH oi.productVariant pv
                 LEFT JOIN FETCH pv.product
-                LEFT JOIN FETCH oi.discount
+                LEFT JOIN FETCH oi.itemDiscountRelation
                 WHERE oi.order.id = :orderId
             """)
     List<OrderItem> findByOrderIdWithDetails(@Param("orderId") UUID orderId);
@@ -34,16 +48,17 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, UUID> {
     @Query("""
                 SELECT pv.product.id,
                        pv.product.name,
-                       pv.product.imageUrl,
+                       '',
                        COALESCE(SUM(oi.quantity), 0),
-                       COALESCE(SUM(oi.quantity * oi.unitAmount - oi.discountAmount), 0)
+                       COALESCE(SUM(oi.quantity * oi.unitPrice - oi.itemDiscount), 0)
                 FROM OrderItem oi
                 JOIN oi.order o
                 JOIN oi.productVariant pv
                 WHERE o.status = 'COMPLETED'
+                  AND oi.status = 'ACTIVE'
                   AND (CAST(:fromDate AS timestamp) IS NULL OR o.orderTime >= :fromDate)
                   AND (CAST(:toDate AS timestamp) IS NULL OR o.orderTime <= :toDate)
-                GROUP BY pv.product.id, pv.product.name, pv.product.imageUrl
+                GROUP BY pv.product.id, pv.product.name
                 ORDER BY SUM(oi.quantity) DESC
             """)
     List<Object[]> findTopSellingProducts(

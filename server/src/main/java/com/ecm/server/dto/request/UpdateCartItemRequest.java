@@ -12,6 +12,6 @@ import lombok.*;
 public class UpdateCartItemRequest {
 
     @NotNull(message = "Quantity is required")
-    @Min(value = 0, message = "Quantity cannot be negative")
+    @Min(value = 1, message = "Quantity must be at least 1; use the remove endpoint to delete an item")
     private Integer quantity;
 }

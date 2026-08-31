@@ -1,6 +1,7 @@
 package com.ecm.server.controller;
 
 import com.ecm.server.dto.request.CreateDiscountRequest;
+import com.ecm.server.dto.request.UpdateDiscountRequest;
 import com.ecm.server.dto.response.DiscountDetailResponse;
 import com.ecm.server.exception.GlobalExceptionHandler;
 import com.ecm.server.service.AdminDiscountService;
@@ -23,6 +24,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -50,9 +52,9 @@ class AdminDiscountControllerTest {
         CreateDiscountRequest request = CreateDiscountRequest.builder()
                 .code("FLASH50")
                 .title("Flash Sale 50k")
-                .type("FIXED")
+                .discountType("FIXED")
                 .value(50000)
-                .scope("ALL")
+                .applicationScope("ALL_ITEMS")
                 .minOrderAmount(200000L)
                 .startAt(Instant.now())
                 .endAt(Instant.now().plusSeconds(86400))
@@ -62,9 +64,9 @@ class AdminDiscountControllerTest {
                 .id(UUID.randomUUID())
                 .code("FLASH50")
                 .title("Flash Sale 50k")
-                .type("FIXED")
+                .discountType("FIXED")
                 .value(50000)
-                .scope("ALL")
+                .applicationScope("ALL_ITEMS")
                 .minOrderAmount(200000L)
                 .status("ACTIVE")
                 .appliedVariants(List.of())
@@ -76,8 +78,50 @@ class AdminDiscountControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.code").value(20100))
+                .andExpect(jsonPath("$.message").value("CREATED"))
                 .andExpect(jsonPath("$.data.code").value("FLASH50"));
+    }
+
+    @Test
+    void createDiscount_whenPercentExceeds100_shouldReturnStaticValidationKey() throws Exception {
+        CreateDiscountRequest request = CreateDiscountRequest.builder()
+                .title("Invalid percentage")
+                .discountType("PERCENT")
+                .value(101)
+                .applicationScope("ALL_ITEMS")
+                .startAt(Instant.now())
+                .endAt(Instant.now().plusSeconds(86400))
+                .build();
+
+        mockMvc.perform(post("/api/v1/admin/discounts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors").isArray());
+    }
+
+    @Test
+    void updateDiscount_acceptsOptionalCodeField() throws Exception {
+        UUID discountId = UUID.randomUUID();
+        UpdateDiscountRequest request = UpdateDiscountRequest.builder()
+                .code("FLASH75")
+                .title("Flash Sale 75k")
+                .discountType("FIXED")
+                .value(75000)
+                .applicationScope("ORDER")
+                .startAt(Instant.now())
+                .endAt(Instant.now().plusSeconds(86400))
+                .build();
+
+        when(adminDiscountService.updateDiscount(any(UUID.class), any(UpdateDiscountRequest.class), any()))
+                .thenReturn(DiscountDetailResponse.builder().id(discountId).code("FLASH75").build());
+
+        mockMvc.perform(put("/api/v1/admin/discounts/{id}", discountId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("UPDATED"))
+                .andExpect(jsonPath("$.data.code").value("FLASH75"));
     }
 }

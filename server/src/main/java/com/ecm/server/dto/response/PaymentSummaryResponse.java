@@ -13,8 +13,9 @@ import java.util.UUID;
 public class PaymentSummaryResponse {
 
     private UUID id;
-    private String method;
+    private String paymentMethodCode;
+    private Long amount;
     private Instant paidAt;
-    private String transactionCode;
+    private String providerTransactionCode;
     private String status;
 }

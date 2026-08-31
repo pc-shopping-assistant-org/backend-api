@@ -42,17 +42,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = getJwtFromRequest(request);
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
-                // 1. Check if token is in Redis blacklist (with fail-open resilience)
+                // 1. Check if token is in Redis blacklist. Revocation lookup
+                // failures fail closed: a token must not authenticate while
+                // the session store is unavailable.
                 if (isTokenBlacklisted(jwt)) {
                     log.warn("Attempt to authenticate with blacklisted token");
                     filterChain.doFilter(request, response);
                     return;
                 }
 
-                // 2. Decode UserPrincipal directly from JWT claims in memory (0 DB queries)
+                // 2. Decode the principal from JWT claims in memory. The next
+                // status check still consults the authoritative account row.
                 UserPrincipal userPrincipal = tokenProvider.getUserPrincipalFromToken(jwt);
 
-                // 3. Check if account is in Redis blocked list (with fail-open resilience)
+                // 3. Check the Redis revocation hint and then the database
+                // source of truth. The JWT status claim is intentionally not
+                // trusted because it is stale after an admin lock/unlock.
                 if (userPrincipal.getAccountId() != null && isAccountBlocked(userPrincipal.getAccountId())) {
                     log.warn("Attempt to authenticate with blocked account: {}", userPrincipal.getAccountId());
                     filterChain.doFilter(request, response);
@@ -82,25 +87,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Boolean isBlacklisted = redisTemplate.hasKey(BLACKLIST_TOKEN_PREFIX + token);
             return Boolean.TRUE.equals(isBlacklisted);
         } catch (Exception ex) {
-            log.warn("Redis unavailable during token blacklist check. Failing open: {}", ex.getMessage());
-            return false;
+            log.error("Redis unavailable during token blacklist check. Failing closed: {}", ex.getMessage());
+            return true;
         }
     }
 
     private boolean isAccountBlocked(UUID accountId) {
+        boolean cacheBlocked = false;
         try {
             Boolean isBlocked = redisTemplate.hasKey(BLOCKED_ACCOUNT_PREFIX + accountId);
-            return Boolean.TRUE.equals(isBlocked);
+            cacheBlocked = Boolean.TRUE.equals(isBlocked);
         } catch (Exception ex) {
-            log.warn("Redis unavailable during account block check. Fallback querying DB PostgreSQL for account [{}]: {}", accountId, ex.getMessage());
-            try {
-                return accountRepository.findById(accountId)
-                        .map(account -> !"ACTIVE".equalsIgnoreCase(account.getStatus()))
-                        .orElse(true);
-            } catch (Exception dbEx) {
-                log.error("DB fallback check failed for account [{}]: {}", accountId, dbEx.getMessage());
-                return false;
-            }
+            log.warn("Redis unavailable during account block check; querying DB for account [{}]: {}", accountId, ex.getMessage());
+        }
+        if (cacheBlocked) {
+            return true;
+        }
+
+        try {
+            return accountRepository.findStatusById(accountId)
+                    .map(status -> !"ACTIVE".equalsIgnoreCase(status))
+                    .orElse(true);
+        } catch (Exception dbEx) {
+            // Do not authenticate when the authoritative status cannot be
+            // checked; a transient DB failure must not turn a locked account
+            // into an active one.
+            log.error("DB account status check failed for account [{}]", accountId, dbEx);
+            return true;
         }
     }
 

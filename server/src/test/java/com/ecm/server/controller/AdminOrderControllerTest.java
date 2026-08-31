@@ -49,13 +49,13 @@ class AdminOrderControllerTest {
     void updateOrderStatus_shouldReturnUpdatedOrder() throws Exception {
         UUID orderId = UUID.randomUUID();
         UpdateOrderStatusRequest request = UpdateOrderStatusRequest.builder()
-                .status("CONFIRM")
+                .status("CONFIRMED")
                 .reason("Verified payment")
                 .build();
 
         OrderDetailResponse response = OrderDetailResponse.builder()
                 .id(orderId)
-                .status("CONFIRM")
+                .status("CONFIRMED")
                 .totalAmount(500000L)
                 .build();
 
@@ -66,8 +66,8 @@ class AdminOrderControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.status").value("CONFIRM"));
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
     }
 
     @Test
@@ -86,7 +86,7 @@ class AdminOrderControllerTest {
         mockMvc.perform(get("/api/v1/admin/orders/{id}/invoice", orderId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.invoiceId").value("INV-ABCD1234"))
                 .andExpect(jsonPath("$.data.paymentStatus").value("PAID"));
     }

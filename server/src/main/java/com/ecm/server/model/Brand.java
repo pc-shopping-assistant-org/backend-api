@@ -23,11 +23,18 @@ public class Brand {
     @Column(name = "name", nullable = false, unique = true, length = 100)
     private String name;
 
+    @Column(name = "seo_name", nullable = false, unique = true, length = 255)
+    private String seoName;
+
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "logo_url", length = 255)
-    private String logoUrl;
+    @Column(name = "image_file_id")
+    private UUID imageFileId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "image_file_id", insertable = false, updatable = false)
+    private File imageFile;
 
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default

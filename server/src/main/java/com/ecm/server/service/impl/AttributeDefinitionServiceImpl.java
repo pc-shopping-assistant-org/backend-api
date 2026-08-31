@@ -75,6 +75,10 @@ public class AttributeDefinitionServiceImpl implements AttributeDefinitionServic
                 .filter(a -> !STATUS_DELETED.equalsIgnoreCase(a.getStatus()))
                 .orElseThrow(() -> new BusinessException(StatusCode.ATTRIBUTE_NOT_FOUND));
 
+        // Soft deletion is guarded by deleteAttribute(), which checks whether
+        // this definition is still assigned to a category specification group.
+        validateMutableStatus(request.getStatus());
+
         // 2. Update entity fields via MapStruct @MappingTarget
         attributeDefinitionMapper.updateEntityFromRequest(request, attribute);
         AttributeDefinition updatedAttribute = attributeDefinitionRepository.save(attribute);
@@ -101,5 +105,13 @@ public class AttributeDefinitionServiceImpl implements AttributeDefinitionServic
         attribute.setStatus(STATUS_DELETED);
         attributeDefinitionRepository.save(attribute);
         log.info("Soft deleted attribute definition with id: {}", id);
+    }
+
+    private void validateMutableStatus(String status) {
+        if (status != null && !"ACTIVE".equalsIgnoreCase(status)
+                && !"INACTIVE".equalsIgnoreCase(status)) {
+            throw new BusinessException(StatusCode.BAD_REQUEST,
+                    "Only ACTIVE or INACTIVE is allowed here; use the delete endpoint for DELETED");
+        }
     }
 }

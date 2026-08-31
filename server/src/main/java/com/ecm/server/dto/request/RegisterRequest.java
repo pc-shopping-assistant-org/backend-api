@@ -17,10 +17,6 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class RegisterRequest {
 
-    @NotBlank(message = "Username is required")
-    @Size(min = 4, max = 50, message = "Username must be between 4 and 50 characters")
-    private String username;
-
     @NotBlank(message = "Password is required")
     @Size(min = 8, max = 100, message = "Password must be at least 8 characters")
     @Pattern(
@@ -41,9 +37,15 @@ public class RegisterRequest {
     @Pattern(regexp = "^(0|\\+84)[0-9]{9,10}$", message = "Phone number must be a valid Vietnamese phone number")
     private String phone;
 
+    @Pattern(
+            regexp = "^(?i)(MALE|FEMALE|OTHER)$",
+            message = "Gender must be MALE, FEMALE, or OTHER"
+    )
     private String gender;
 
     private LocalDate birthday;
 
+    @NotBlank(message = "Address is required")
+    @Size(max = 500, message = "Address cannot exceed 500 characters")
     private String address;
 }

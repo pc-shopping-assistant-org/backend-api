@@ -16,13 +16,16 @@ public interface BrandMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", constant = "ACTIVE")
+    @Mapping(target = "imageFileId", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     Brand toEntity(CreateBrandRequest request);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "imageFileId", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     void updateEntityFromRequest(UpdateBrandRequest request, @MappingTarget Brand brand);
 
+    @Mapping(target = "logoUrl", source = "imageFile.publicUrl")
     BrandResponse toResponse(Brand brand);
 
     List<BrandResponse> toResponseList(List<Brand> brands);

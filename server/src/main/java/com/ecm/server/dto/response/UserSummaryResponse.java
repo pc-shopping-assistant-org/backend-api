@@ -14,7 +14,6 @@ import java.util.UUID;
 public class UserSummaryResponse {
     private UUID id;
     private UUID accountId;
-    private String username;
     private String role;
     private String fullName;
     private String email;

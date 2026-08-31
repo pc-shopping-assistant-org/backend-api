@@ -28,7 +28,7 @@ public class AdminEmployeeController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<CursorPageResponse<EmployeeDetailResponse>>> getEmployees(
-            @ModelAttribute EmployeeFilterRequest request
+            @Valid @ModelAttribute EmployeeFilterRequest request
     ) {
         CursorPageResponse<EmployeeDetailResponse> response = adminEmployeeService.getEmployees(request);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));

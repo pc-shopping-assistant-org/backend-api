@@ -41,10 +41,6 @@ public class Product {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "supplier_id")
-    private Supplier supplier;
-
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "specifications", columnDefinition = "jsonb")
     @Builder.Default
@@ -52,9 +48,6 @@ public class Product {
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
-
-    @Column(name = "image_url", length = 255)
-    private String imageUrl;
 
     @Column(name = "status", nullable = false, length = 15)
     @Builder.Default
@@ -79,4 +72,8 @@ public class Product {
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
     @Builder.Default
     private List<ProductVariant> variants = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<ProductSupplier> productSuppliers = new ArrayList<>();
 }

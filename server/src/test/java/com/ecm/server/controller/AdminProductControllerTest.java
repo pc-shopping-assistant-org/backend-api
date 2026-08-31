@@ -20,6 +20,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -64,8 +65,19 @@ class AdminProductControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.code").value(20100))
+                .andExpect(jsonPath("$.message").value("CREATED"))
                 .andExpect(jsonPath("$.data.name").value("MacBook Pro M3"));
+    }
+
+    @Test
+    void updateProductStatus_whenAccountStatusIsSent_shouldReturnStaticValidationError() throws Exception {
+        UUID productId = UUID.randomUUID();
+
+        mockMvc.perform(patch("/api/v1/admin/products/{id}/status", productId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"LOCKED\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors").isArray());
     }
 }

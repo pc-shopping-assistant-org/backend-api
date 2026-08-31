@@ -14,9 +14,9 @@ public class PaymentDetailResponse {
 
     private UUID id;
     private UUID orderId;
-    private String method;
+    private String paymentMethodCode;
     private Instant paidAt;
-    private String transactionCode;
+    private String providerTransactionCode;
     private String status;
     private Long amount;
     private Instant createdAt;

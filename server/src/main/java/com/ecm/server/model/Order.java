@@ -28,23 +28,30 @@ public class Order {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id")
+    @JoinColumn(name = "customer_id", referencedColumnName = "account_id")
     private Customer customer;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "discount_id")
-    private Discount discount;
+    @JoinColumn(name = "order_discount_id")
+    private Discount orderDiscount;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "shipping_method_id", nullable = false)
+    private ShippingMethod shippingMethod;
+
+    @Column(name = "subtotal_amount", nullable = false)
+    private Long subtotalAmount;
 
     @Column(name = "total_amount", nullable = false)
     private Long totalAmount;
 
-    @Column(name = "ship_amount", nullable = false)
+    @Column(name = "shipping_fee", nullable = false)
     @Builder.Default
-    private Integer shipAmount = 0;
+    private Long shippingFee = 0L;
 
     @Column(name = "discount_amount", nullable = false)
     @Builder.Default
-    private Integer discountAmount = 0;
+    private Long discountAmount = 0L;
 
     @CreationTimestamp
     @Column(name = "order_time", nullable = false, updatable = false)
@@ -53,21 +60,21 @@ public class Order {
     @Column(name = "note")
     private String note;
 
-    @Column(name = "delivery_address")
+    @Column(name = "delivery_address", nullable = false, length = 500)
     private String deliveryAddress;
 
-    @Column(name = "recipient_name", length = 100)
+    @Column(name = "recipient_name", nullable = false, length = 100)
     private String recipientName;
 
-    @Column(name = "recipient_phone", length = 15)
+    @Column(name = "recipient_phone", nullable = false, length = 15)
     private String recipientPhone;
 
     @Column(name = "delivered_at")
     private Instant deliveredAt;
 
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 30)
     @Builder.Default
-    private String status = "PENDING"; // PENDING, CONFIRM, SHIPPING, COMPLETED, CANCELLED, DELETED
+    private String status = "PENDING_CONFIRMATION";
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -92,4 +99,5 @@ public class Order {
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
     @Builder.Default
     private Set<Payment> payments = new LinkedHashSet<>();
+
 }

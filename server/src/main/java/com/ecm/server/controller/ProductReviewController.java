@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,7 +30,7 @@ public class ProductReviewController {
     @GetMapping
     public ResponseEntity<ApiResponse<CursorPageResponse<ReviewResponse>>> getProductReviews(
             @PathVariable UUID productId,
-            @ModelAttribute ReviewFilterRequest filter
+            @Valid @ModelAttribute ReviewFilterRequest filter
     ) {
         CursorPageResponse<ReviewResponse> response = productReviewService.getProductReviews(productId, filter);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));
@@ -44,6 +45,7 @@ public class ProductReviewController {
     }
 
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<ReviewResponse>> createReview(
             @PathVariable UUID productId,
             @Valid @RequestBody CreateReviewRequest request,
@@ -55,6 +57,7 @@ public class ProductReviewController {
     }
 
     @PutMapping("/{reviewId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<ReviewResponse>> updateReview(
             @PathVariable UUID productId,
             @PathVariable UUID reviewId,
@@ -66,6 +69,7 @@ public class ProductReviewController {
     }
 
     @DeleteMapping("/{reviewId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> deleteReview(
             @PathVariable UUID productId,
             @PathVariable UUID reviewId,

@@ -19,7 +19,8 @@ public class ProductDetailResponse {
     private String seoName;
     private BrandResponse brand;
     private CategoryResponse category;
-    private SupplierResponse supplier;
+    @Builder.Default
+    private List<SupplierResponse> suppliers = new ArrayList<>();
 
     @Builder.Default
     private Map<String, Object> specifications = new HashMap<>();

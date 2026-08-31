@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminEmployeeControllerTest {
 
     private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @Mock
     private AdminEmployeeService adminEmployeeService;
@@ -51,7 +51,6 @@ class AdminEmployeeControllerTest {
         UUID employeeId = UUID.randomUUID();
         EmployeeDetailResponse detail = EmployeeDetailResponse.builder()
                 .id(employeeId)
-                .username("emp1")
                 .roleName("ROLE_EMPLOYEE")
                 .fullName("Employee One")
                 .email("emp1@example.com")
@@ -70,25 +69,26 @@ class AdminEmployeeControllerTest {
                         .param("limit", "10")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.items[0].username").value("emp1"));
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.items[0].email").value("emp1@example.com"));
     }
 
     @Test
     void createEmployee_whenValidPayload_shouldReturnCreated() throws Exception {
         UUID roleId = UUID.randomUUID();
         CreateEmployeeRequest request = CreateEmployeeRequest.builder()
-                .username("emp_new")
                 .password("Password123")
                 .roleId(roleId)
                 .fullName("New Employee")
                 .email("emp_new@example.com")
                 .phone("0912345678")
+                .gender("MALE")
+                .salary(25000000L)
+                .joinedAt(java.time.LocalDate.of(2026, 1, 15))
                 .build();
 
         EmployeeDetailResponse createdDetail = EmployeeDetailResponse.builder()
                 .id(UUID.randomUUID())
-                .username("emp_new")
                 .roleId(roleId)
                 .roleName("ROLE_EMPLOYEE")
                 .fullName("New Employee")
@@ -102,8 +102,7 @@ class AdminEmployeeControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.code").value(20100))
-                .andExpect(jsonPath("$.data.username").value("emp_new"));
+                .andExpect(jsonPath("$.message").value("CREATED"))
+                .andExpect(jsonPath("$.data.email").value("emp_new@example.com"));
     }
 }

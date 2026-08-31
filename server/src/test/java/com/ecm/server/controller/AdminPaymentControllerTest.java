@@ -48,13 +48,13 @@ class AdminPaymentControllerTest {
         UUID paymentId = UUID.randomUUID();
         UpdatePaymentStatusRequest request = UpdatePaymentStatusRequest.builder()
                 .status("PAID")
-                .transactionCode("BANK_TRANS_999")
+                .providerTransactionCode("BANK_TRANS_999")
                 .build();
 
         PaymentDetailResponse response = PaymentDetailResponse.builder()
                 .id(paymentId)
                 .status("PAID")
-                .transactionCode("BANK_TRANS_999")
+                .providerTransactionCode("BANK_TRANS_999")
                 .build();
 
         when(adminPaymentService.updatePaymentStatus(eq(paymentId), any(UpdatePaymentStatusRequest.class), any()))
@@ -64,8 +64,8 @@ class AdminPaymentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.status").value("PAID"))
-                .andExpect(jsonPath("$.data.transactionCode").value("BANK_TRANS_999"));
+                .andExpect(jsonPath("$.data.providerTransactionCode").value("BANK_TRANS_999"));
     }
 }

@@ -21,10 +21,10 @@ public class ProductSummaryResponse {
     private String brandName;
     private UUID categoryId;
     private String categoryName;
-    private UUID supplierId;
-    private String supplierName;
-    private Integer minPrice;
-    private Integer maxPrice;
+    @Builder.Default
+    private java.util.List<SupplierResponse> suppliers = new java.util.ArrayList<>();
+    private Long minPrice;
+    private Long maxPrice;
     private String imageUrl;
 
     @Builder.Default

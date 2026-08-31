@@ -11,10 +11,12 @@ import com.ecm.server.exception.BusinessException;
 import com.ecm.server.mapper.UserMapper;
 import com.ecm.server.model.Account;
 import com.ecm.server.model.Customer;
+import com.ecm.server.model.CustomerAddress;
 import com.ecm.server.model.Employee;
 import com.ecm.server.model.Role;
 import com.ecm.server.repository.AccountRepository;
 import com.ecm.server.repository.CustomerRepository;
+import com.ecm.server.repository.CustomerAddressRepository;
 import com.ecm.server.repository.EmployeeRepository;
 import com.ecm.server.repository.RoleRepository;
 import com.ecm.server.service.AuthService;
@@ -25,8 +27,10 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.Duration;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -47,6 +51,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final AccountRepository accountRepository;
     private final CustomerRepository customerRepository;
+    private final CustomerAddressRepository customerAddressRepository;
     private final EmployeeRepository employeeRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -58,29 +63,30 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void register(RegisterRequest request) {
-        // 1. Verify username, email, and phone uniqueness
-        if (accountRepository.existsByUsername(request.getUsername())) {
-            throw new BusinessException(StatusCode.USERNAME_ALREADY_EXISTS);
-        }
-        if (customerRepository.existsByEmail(request.getEmail())) {
+        String email = request.getEmail() == null ? null : request.getEmail().trim().toLowerCase(Locale.ROOT);
+        String phone = request.getPhone() == null ? null : request.getPhone().trim();
+        // Email and phone are account identity fields, not profile duplicates.
+        if (accountRepository.existsByEmailIgnoreCase(email)) {
             throw new BusinessException(StatusCode.EMAIL_ALREADY_EXISTS);
         }
-        if (customerRepository.existsByPhone(request.getPhone())) {
+        if (accountRepository.existsByPhone(phone)) {
             throw new BusinessException(StatusCode.PHONE_ALREADY_EXISTS);
         }
 
         // 2. Cache registration payload in Redis
-        otpService.savePendingRegistration(request.getEmail(), request);
+        request.setEmail(email);
+        request.setPhone(phone);
+        otpService.savePendingRegistration(email, request);
 
         // 3. Generate 6-digit OTP code and cache in Redis
-        otpService.generateAndSaveOtp(request.getEmail(), OTP_PURPOSE_REGISTRATION);
+        otpService.generateAndSaveOtp(email, OTP_PURPOSE_REGISTRATION);
     }
 
     @Override
     @Transactional
     public AuthResponse verifyRegistrationOtp(VerifyOtpRequest request) {
         // 1. Validate OTP from Redis
-        boolean isValid = otpService.verifyOtp(request.getEmail(), request.getPurpose(), request.getOtp());
+        boolean isValid = otpService.verifyOtp(request.getEmail(), OTP_PURPOSE_REGISTRATION, request.getOtp());
         if (!isValid) {
             throw new BusinessException(StatusCode.VALIDATION_ERROR, "Invalid or expired OTP code");
         }
@@ -97,8 +103,9 @@ public class AuthServiceImpl implements AuthService {
 
         // 4. Persist new account entity
         Account account = Account.builder()
-                .username(regData.getUsername())
-                .password(passwordEncoder.encode(regData.getPassword()))
+                .email(regData.getEmail().trim().toLowerCase())
+                .phone(regData.getPhone().trim())
+                .passwordHash(passwordEncoder.encode(regData.getPassword()))
                 .role(customerRole)
                 .status(STATUS_ACTIVE)
                 .build();
@@ -109,13 +116,21 @@ public class AuthServiceImpl implements AuthService {
         customer.setAccount(savedAccount);
         Customer savedCustomer = customerRepository.save(customer);
 
+        customerAddressRepository.save(CustomerAddress.builder()
+                .customer(savedCustomer)
+                .recipientName(regData.getFullName().trim())
+                .phone(regData.getPhone().trim())
+                .addressLine(regData.getAddress().trim())
+                .isDefault(true)
+                .build());
+
         // 6. Evict temporary cache keys from Redis
-        otpService.deleteOtp(request.getEmail(), request.getPurpose());
+        otpService.deleteOtp(request.getEmail(), OTP_PURPOSE_REGISTRATION);
         otpService.deletePendingRegistration(request.getEmail());
 
         // 7. Generate JWT access and refresh token pair via MapStruct
-        String accessToken = tokenProvider.generateAccessToken(savedAccount.getId(), savedAccount.getUsername(), customerRole.getName());
-        String refreshToken = tokenProvider.generateRefreshToken(savedAccount.getId(), savedAccount.getUsername());
+        String accessToken = tokenProvider.generateAccessToken(savedAccount.getId(), savedAccount.getEmail(), customerRole.getName());
+        String refreshToken = tokenProvider.generateRefreshToken(savedAccount.getId(), savedAccount.getEmail());
         UserSummaryResponse userSummary = userMapper.toSummary(savedAccount, savedCustomer);
 
         return AuthResponse.builder()
@@ -128,8 +143,10 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void resendOtp(ResendOtpRequest request) {
+        String purpose = request.getPurpose().trim().toUpperCase(Locale.ROOT);
+
         // 1. Verify existence of pending registration if applicable
-        if (OTP_PURPOSE_REGISTRATION.equalsIgnoreCase(request.getPurpose())) {
+        if (OTP_PURPOSE_REGISTRATION.equals(purpose)) {
             RegisterRequest regData = otpService.getPendingRegistration(request.getEmail());
             if (regData == null) {
                 throw new BusinessException(StatusCode.VALIDATION_ERROR, "No pending registration found for this email");
@@ -137,14 +154,15 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // 2. Generate and store fresh OTP in Redis
-        otpService.generateAndSaveOtp(request.getEmail(), request.getPurpose());
+        otpService.generateAndSaveOtp(request.getEmail(), purpose);
     }
 
     @Override
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
-        // 1. Retrieve account by username
-        Account account = accountRepository.findByUsername(request.getUsername())
+        // 1. Retrieve account by canonical email-or-phone identifier
+        String identifier = request.getIdentifier().trim();
+        Account account = accountRepository.findByLoginIdentifier(identifier)
                 .orElseThrow(() -> new BusinessException(StatusCode.INVALID_CREDENTIALS));
 
         // 2. Validate account active state
@@ -156,7 +174,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // 3. Match hashed password
-        if (!passwordEncoder.matches(request.getPassword(), account.getPassword())) {
+        if (!passwordEncoder.matches(request.getPassword(), account.getPasswordHash())) {
             throw new BusinessException(StatusCode.INVALID_CREDENTIALS);
         }
 
@@ -166,10 +184,10 @@ public class AuthServiceImpl implements AuthService {
 
         // 5. Generate JWT tokens
         UUID employeeId = employeeRepository.findByAccountId(account.getId())
-                .map(com.ecm.server.model.Employee::getId)
+                .map(com.ecm.server.model.Employee::getAccountId)
                 .orElse(null);
-        String accessToken = tokenProvider.generateAccessToken(account.getId(), account.getUsername(), roleName, employeeId);
-        String refreshToken = tokenProvider.generateRefreshToken(account.getId(), account.getUsername());
+        String accessToken = tokenProvider.generateAccessToken(account.getId(), account.getEmail(), roleName, employeeId);
+        String refreshToken = tokenProvider.generateRefreshToken(account.getId(), account.getEmail());
 
         return AuthResponse.builder()
                 .accessToken(accessToken)
@@ -183,15 +201,19 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         // 1. Validate refresh token structure and signature
         String refreshToken = request.getRefreshToken();
-        if (!tokenProvider.validateToken(refreshToken)) {
+        if (isTokenBlacklisted(refreshToken) || !tokenProvider.validateToken(refreshToken)
+                || !tokenProvider.isRefreshToken(refreshToken)) {
             throw new BusinessException(StatusCode.TOKEN_INVALID, "Invalid or expired refresh token");
         }
 
-        // 2. Extract username and retrieve account
-        String username = tokenProvider.getUsernameFromToken(refreshToken);
-        Account account = accountRepository.findByUsername(username)
+        // 2. Extract the email/phone subject and retrieve account
+        String identifier = tokenProvider.getIdentifierFromToken(refreshToken);
+        Account account = accountRepository.findByLoginIdentifier(identifier)
                 .orElseThrow(() -> new BusinessException(StatusCode.ACCOUNT_NOT_FOUND));
 
+        if (STATUS_LOCKED.equalsIgnoreCase(account.getStatus()) || STATUS_BLOCKED.equalsIgnoreCase(account.getStatus())) {
+            throw new BusinessException(StatusCode.ACCOUNT_LOCKED);
+        }
         if (!STATUS_ACTIVE.equalsIgnoreCase(account.getStatus())) {
             throw new BusinessException(StatusCode.ACCOUNT_INACTIVE);
         }
@@ -199,10 +221,10 @@ public class AuthServiceImpl implements AuthService {
         // 3. Re-issue fresh access and refresh token pair
         String roleName = account.getRole() != null ? account.getRole().getName() : ROLE_CUSTOMER;
         UUID employeeId = employeeRepository.findByAccountId(account.getId())
-                .map(com.ecm.server.model.Employee::getId)
+                .map(com.ecm.server.model.Employee::getAccountId)
                 .orElse(null);
-        String newAccessToken = tokenProvider.generateAccessToken(account.getId(), account.getUsername(), roleName, employeeId);
-        String newRefreshToken = tokenProvider.generateRefreshToken(account.getId(), account.getUsername());
+        String newAccessToken = tokenProvider.generateAccessToken(account.getId(), account.getEmail(), roleName, employeeId);
+        String newRefreshToken = tokenProvider.generateRefreshToken(account.getId(), account.getEmail());
         UserSummaryResponse userSummary = buildUserSummary(account);
 
         return AuthResponse.builder()
@@ -214,61 +236,81 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void logout(String bearerToken) {
-        // 1. Extract raw JWT from Authorization header
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            String token = bearerToken.substring(BEARER_PREFIX_LENGTH);
-            // 2. Compute remaining expiration and place token into Redis Blacklist
-            try {
-                long remainingTimeMs = tokenProvider.getExpirationTimeMsFromToken(token);
-                if (remainingTimeMs > 0) {
-                    String key = JwtAuthenticationFilter.BLACKLIST_TOKEN_PREFIX + token;
-                    redisTemplate.opsForValue().set(key, "LOGGED_OUT", Duration.ofMillis(remainingTimeMs));
-                }
-            } catch (Exception ex) {
-                log.warn("Failed to write blacklisted token to Redis during logout: {}", ex.getMessage());
+    public void logout(String bearerToken, String refreshToken) {
+        // The access token is always carried by the authenticated request.
+        if (StringUtils.hasText(bearerToken)
+                && bearerToken.startsWith(JwtAuthenticationFilter.BEARER_PREFIX)) {
+            blacklistToken(bearerToken.substring(BEARER_PREFIX_LENGTH));
+        }
+
+        // A refresh token is optional for clients that only hold an access
+        // token; when supplied it is revoked to prevent token re-issuance.
+        if (StringUtils.hasText(refreshToken)) {
+            if (!tokenProvider.validateToken(refreshToken) || !tokenProvider.isRefreshToken(refreshToken)) {
+                throw new BusinessException(StatusCode.TOKEN_INVALID, "Invalid refresh token");
             }
+            blacklistToken(refreshToken);
+        }
+    }
+
+    private void blacklistToken(String token) {
+        try {
+            long remainingTimeMs = tokenProvider.getExpirationTimeMsFromToken(token);
+            if (remainingTimeMs > 0) {
+                String key = JwtAuthenticationFilter.BLACKLIST_TOKEN_PREFIX + token;
+                redisTemplate.opsForValue().set(key, "LOGGED_OUT", Duration.ofMillis(remainingTimeMs));
+            }
+        } catch (Exception ex) {
+            log.error("Failed to write blacklisted token to Redis during logout", ex);
+            throw new BusinessException(
+                    StatusCode.SERVICE_UNAVAILABLE,
+                    "Session service is unavailable; logout was not completed"
+            );
+        }
+    }
+
+    private boolean isTokenBlacklisted(String token) {
+        try {
+            return Boolean.TRUE.equals(redisTemplate.hasKey(
+                    JwtAuthenticationFilter.BLACKLIST_TOKEN_PREFIX + token));
+        } catch (Exception ex) {
+            log.error("Redis unavailable during refresh-token blacklist check", ex);
+            throw new BusinessException(
+                    StatusCode.SERVICE_UNAVAILABLE,
+                    "Session service is unavailable; please try again later"
+            );
         }
     }
 
     @Override
     public void forgotPassword(ForgotPasswordRequest request) {
-        // 1. Check if email exists in Customer or Employee records
-        boolean exists = customerRepository.existsByEmail(request.getEmail()) || employeeRepository.existsByEmail(request.getEmail());
-        if (!exists) {
-            throw new BusinessException(StatusCode.CUSTOMER_NOT_FOUND, "Email not found in system");
-        }
+        // 1. Resolve either canonical email or phone through accounts.
+        Account account = accountRepository.findByLoginIdentifier(request.getLoginIdentifier())
+                .orElseThrow(() -> new BusinessException(StatusCode.ACCOUNT_NOT_FOUND));
 
-        // 2. Generate and store OTP in Redis with FORGOT_PASSWORD purpose
-        otpService.generateAndSaveOtp(request.getEmail(), OTP_PURPOSE_FORGOT_PASSWORD);
+        // 2. OTP delivery is email-based today, regardless of which account
+        // identity the customer used to request the reset.
+        otpService.generateAndSaveOtp(account.getEmail(), OTP_PURPOSE_FORGOT_PASSWORD);
     }
 
     @Override
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
-        // 1. Validate OTP from Redis
-        boolean isValid = otpService.verifyOtp(request.getEmail(), OTP_PURPOSE_FORGOT_PASSWORD, request.getOtp());
+        // 1. Resolve the account from either email or phone, then verify the
+        // OTP against its canonical email delivery key.
+        Account account = accountRepository.findByLoginIdentifier(request.getLoginIdentifier())
+                .orElseThrow(() -> new BusinessException(StatusCode.ACCOUNT_NOT_FOUND));
+        boolean isValid = otpService.verifyOtp(account.getEmail(), OTP_PURPOSE_FORGOT_PASSWORD, request.getOtp());
         if (!isValid) {
             throw new BusinessException(StatusCode.VALIDATION_ERROR, "Invalid or expired OTP code");
         }
 
-        // 2. Lookup corresponding Account via Customer or Employee email
-        Optional<Customer> customerOpt = customerRepository.findByEmail(request.getEmail());
-        Account account;
-        if (customerOpt.isPresent()) {
-            account = customerOpt.get().getAccount();
-        } else {
-            Employee employee = employeeRepository.findByEmail(request.getEmail())
-                    .orElseThrow(() -> new BusinessException(StatusCode.ACCOUNT_NOT_FOUND));
-            account = employee.getAccount();
-        }
-
-        // 3. Hash and update new password
-        account.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        // 2. Hash and update new password
+        account.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         accountRepository.save(account);
 
-        // 4. Evict OTP from Redis
-        otpService.deleteOtp(request.getEmail(), OTP_PURPOSE_FORGOT_PASSWORD);
+        // 3. Evict OTP from Redis
+        otpService.deleteOtp(account.getEmail(), OTP_PURPOSE_FORGOT_PASSWORD);
     }
 
     private UserSummaryResponse buildUserSummary(Account account) {
@@ -281,8 +323,9 @@ public class AuthServiceImpl implements AuthService {
         return employeeOpt.map(employee -> userMapper.toSummary(account, employee))
                 .orElseGet(() -> UserSummaryResponse.builder()
                         .accountId(account.getId())
-                        .username(account.getUsername())
                         .role(account.getRole() != null ? account.getRole().getName() : ROLE_CUSTOMER)
+                        .email(account.getEmail())
+                        .phone(account.getPhone())
                         .build());
     }
 }

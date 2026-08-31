@@ -52,7 +52,7 @@ class CartControllerTest {
                 .productVariantId(variantId)
                 .productName("iPhone 16 Pro Max")
                 .sku("IP16PM-DESERT-256")
-                .price(34990000)
+                .listPrice(34990000L)
                 .quantity(2)
                 .subtotal(69980000L)
                 .build();
@@ -68,7 +68,7 @@ class CartControllerTest {
         mockMvc.perform(get("/api/v1/cart")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.totalItems").value(2))
                 .andExpect(jsonPath("$.data.items[0].sku").value("IP16PM-DESERT-256"));
     }
@@ -93,7 +93,7 @@ class CartControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.totalItems").value(1));
     }
 }

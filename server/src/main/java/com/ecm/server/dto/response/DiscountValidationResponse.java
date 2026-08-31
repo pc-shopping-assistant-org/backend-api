@@ -15,7 +15,7 @@ public class DiscountValidationResponse {
     private UUID discountId;
     private String code;
     private String title;
-    private Integer discountAmount;
+    private Long discountAmount;
     private Long finalAmount;
     private String message;
 }

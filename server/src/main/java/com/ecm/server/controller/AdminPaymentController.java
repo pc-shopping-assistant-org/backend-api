@@ -27,7 +27,7 @@ public class AdminPaymentController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<CursorPageResponse<PaymentDetailResponse>>> getAdminPayments(
-            @ModelAttribute PaymentFilterRequest filter
+            @Valid @ModelAttribute PaymentFilterRequest filter
     ) {
         CursorPageResponse<PaymentDetailResponse> response = adminPaymentService.getAdminPayments(filter);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));

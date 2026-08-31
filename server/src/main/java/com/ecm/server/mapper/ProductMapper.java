@@ -16,7 +16,6 @@ public interface ProductMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "brand", ignore = true)
     @Mapping(target = "category", ignore = true)
-    @Mapping(target = "supplier", ignore = true)
     @Mapping(target = "status", constant = "ACTIVE")
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
@@ -28,7 +27,6 @@ public interface ProductMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "brand", ignore = true)
     @Mapping(target = "category", ignore = true)
-    @Mapping(target = "supplier", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
@@ -40,8 +38,7 @@ public interface ProductMapper {
     @Mapping(target = "brandName", source = "brand.name")
     @Mapping(target = "categoryId", source = "category.id")
     @Mapping(target = "categoryName", source = "category.name")
-    @Mapping(target = "supplierId", source = "supplier.id")
-    @Mapping(target = "supplierName", source = "supplier.name")
+    @Mapping(target = "suppliers", ignore = true)
     @Mapping(target = "minPrice", ignore = true)
     @Mapping(target = "maxPrice", ignore = true)
     @Mapping(target = "ratingAverage", constant = "0.0")
@@ -49,6 +46,7 @@ public interface ProductMapper {
     ProductSummaryResponse toSummaryResponse(Product entity);
 
     @Mapping(target = "variants", source = "variants")
+    @Mapping(target = "suppliers", ignore = true)
     @Mapping(target = "ratingAverage", constant = "0.0")
     @Mapping(target = "reviewCount", constant = "0")
     ProductDetailResponse toDetailResponse(Product entity);

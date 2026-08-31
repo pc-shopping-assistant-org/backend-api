@@ -1,7 +1,7 @@
 package com.ecm.server.controller;
 
 import com.ecm.server.common.CursorPageResponse;
-import com.ecm.server.dto.request.UpdateStatusRequest;
+import com.ecm.server.dto.request.UpdateReviewStatusRequest;
 import com.ecm.server.dto.response.ReviewResponse;
 import com.ecm.server.exception.GlobalExceptionHandler;
 import com.ecm.server.service.AdminProductReviewService;
@@ -65,14 +65,14 @@ class AdminProductReviewControllerTest {
 
         mockMvc.perform(get("/api/v1/admin/reviews"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.items[0].status").value("ACTIVE"));
     }
 
     @Test
     void updateReviewStatus_shouldReturnUpdatedReview() throws Exception {
         UUID reviewId = UUID.randomUUID();
-        UpdateStatusRequest request = UpdateStatusRequest.builder()
+        UpdateReviewStatusRequest request = UpdateReviewStatusRequest.builder()
                 .status("INACTIVE")
                 .reason("Inappropriate language")
                 .build();
@@ -82,14 +82,24 @@ class AdminProductReviewControllerTest {
                 .status("INACTIVE")
                 .build();
 
-        when(adminProductReviewService.updateReviewStatus(eq(reviewId), any(UpdateStatusRequest.class), any()))
+        when(adminProductReviewService.updateReviewStatus(eq(reviewId), any(UpdateReviewStatusRequest.class), any()))
                 .thenReturn(response);
 
         mockMvc.perform(patch("/api/v1/admin/reviews/{id}/status", reviewId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.status").value("INACTIVE"));
+    }
+
+    @Test
+    void updateReviewStatus_whenDiscountStatusIsSent_shouldReturnStaticValidationError() throws Exception {
+        mockMvc.perform(patch("/api/v1/admin/reviews/{id}/status", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"EXPIRED\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors").isArray());
     }
 }

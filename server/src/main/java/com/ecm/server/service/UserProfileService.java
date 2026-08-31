@@ -13,4 +13,6 @@ public interface UserProfileService {
     UserProfileResponse updateProfile(UUID accountId, UpdateProfileRequest request);
 
     void changePassword(UUID accountId, ChangePasswordRequest request);
+
+    void requestChangePasswordOtp(UUID accountId);
 }

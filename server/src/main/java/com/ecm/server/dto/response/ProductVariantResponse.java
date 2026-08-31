@@ -7,7 +7,9 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -18,15 +20,10 @@ public class ProductVariantResponse {
     private UUID id;
     private UUID productId;
     private String sku;
-    private Integer price;
-    private Integer priceSale;
+    private Long listPrice;
+
     private Integer quantity;
     private String model;
-    private String inventoryPolicy;
-
-    @Builder.Default
-    private Map<String, Object> specifications = new HashMap<>();
-
     private String description;
     private String warranty;
     private String barcode;

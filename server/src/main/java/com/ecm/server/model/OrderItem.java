@@ -31,22 +31,23 @@ public class OrderItem {
     @Column(name = "quantity", nullable = false)
     private int quantity;
 
-    @Column(name = "unit_amount", nullable = false)
-    private int unitAmount;
+    @Column(name = "unit_price", nullable = false)
+    private Long unitPrice;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "discount_id")
-    private Discount discount;
+    @JoinColumn(name = "item_discount_id")
+    private Discount itemDiscountRelation;
 
-    @Column(name = "discount_amount", nullable = false)
+    @Column(name = "item_discount", nullable = false)
     @Builder.Default
-    private int discountAmount = 0;
+    private Long itemDiscount = 0L;
 
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
-    private String status = "ACTIVE"; // ACTIVE, CANCELLED, DELETED
+    private String status = "ACTIVE";
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
 }

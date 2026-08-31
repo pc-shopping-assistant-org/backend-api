@@ -47,7 +47,7 @@ class PaymentControllerTest {
         UUID orderId = UUID.randomUUID();
         CreatePaymentIntentRequest request = CreatePaymentIntentRequest.builder()
                 .orderId(orderId)
-                .paymentMethod("STRIPE")
+                .paymentMethod("STRIPE_CARD")
                 .build();
 
         PaymentIntentResponse response = PaymentIntentResponse.builder()
@@ -66,7 +66,7 @@ class PaymentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.clientSecret").value("pi_123_secret_456"))
                 .andExpect(jsonPath("$.data.amount").value(1000000));
     }

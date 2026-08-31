@@ -27,8 +27,9 @@ public class ProductImage {
     @JoinColumn(name = "product_variant_id", nullable = false)
     private ProductVariant productVariant;
 
-    @Column(name = "image_url", nullable = false, length = 255)
-    private String imageUrl;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "file_id", nullable = false)
+    private File file;
 
     @Column(name = "is_main", nullable = false)
     @Builder.Default

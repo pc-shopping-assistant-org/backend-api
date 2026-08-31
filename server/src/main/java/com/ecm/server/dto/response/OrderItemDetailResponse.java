@@ -19,7 +19,9 @@ public class OrderItemDetailResponse {
     private String model;
     private String imageUrl;
     private Integer quantity;
-    private Integer unitAmount;
-    private Integer discountAmount;
+    private Long unitPrice;
+    private Long itemDiscount;
+    private Long itemGross;
+    private Long itemNet;
     private Long totalAmount;
 }

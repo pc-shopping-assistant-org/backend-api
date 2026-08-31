@@ -20,6 +20,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -48,8 +49,7 @@ class AdminProductVariantControllerTest {
         UUID productId = UUID.randomUUID();
         CreateProductVariantRequest request = CreateProductVariantRequest.builder()
                 .sku("IPHONE16-DESERT-256")
-                .price(34990000)
-                .priceSale(33990000)
+                .listPrice(34990000L)
                 .quantity(50)
                 .build();
 
@@ -57,8 +57,7 @@ class AdminProductVariantControllerTest {
                 .id(UUID.randomUUID())
                 .productId(productId)
                 .sku("IPHONE16-DESERT-256")
-                .price(34990000)
-                .priceSale(33990000)
+                .listPrice(34990000L)
                 .quantity(50)
                 .status("ACTIVE")
                 .build();
@@ -70,8 +69,27 @@ class AdminProductVariantControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.code").value(20100))
+                .andExpect(jsonPath("$.message").value("CREATED"))
                 .andExpect(jsonPath("$.data.sku").value("IPHONE16-DESERT-256"));
+    }
+
+    @Test
+    void createVariant_whenWarrantyIsNotPositive_shouldReturnValidationEnvelope() throws Exception {
+        UUID productId = UUID.randomUUID();
+        CreateProductVariantRequest request = CreateProductVariantRequest.builder()
+                .sku("SKU-INVALID-WARRANTY")
+                .listPrice(100L)
+                .quantity(1)
+                .warranty("0")
+                .build();
+
+        mockMvc.perform(post("/api/v1/admin/products/{productId}/variants", productId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors[0].field").value("warranty"));
+
+        verifyNoInteractions(adminProductVariantService);
     }
 }

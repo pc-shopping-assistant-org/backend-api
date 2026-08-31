@@ -2,6 +2,7 @@ package com.ecm.server.service;
 
 import com.ecm.server.common.CursorPageResponse;
 import com.ecm.server.dto.request.OrderFilterRequest;
+import com.ecm.server.dto.request.InvoiceFilterRequest;
 import com.ecm.server.dto.request.UpdateOrderStatusRequest;
 import com.ecm.server.dto.response.InvoiceResponse;
 import com.ecm.server.dto.response.OrderDetailResponse;
@@ -17,4 +18,6 @@ public interface AdminOrderService {
     OrderDetailResponse updateOrderStatus(UUID orderId, UpdateOrderStatusRequest request, UUID adminId);
 
     InvoiceResponse getOrderInvoice(UUID orderId);
+
+    CursorPageResponse<InvoiceResponse> getInvoices(InvoiceFilterRequest filter);
 }

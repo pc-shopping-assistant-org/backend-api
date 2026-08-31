@@ -2,6 +2,7 @@ package com.ecm.server.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,5 +19,9 @@ public class ResendOtpRequest {
     private String email;
 
     @NotBlank(message = "Purpose is required")
+    @Pattern(
+            regexp = "(?i)REGISTRATION|FORGOT_PASSWORD",
+            message = "Purpose must be REGISTRATION or FORGOT_PASSWORD"
+    )
     private String purpose;
 }

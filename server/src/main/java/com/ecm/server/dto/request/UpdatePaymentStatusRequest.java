@@ -18,7 +18,7 @@ public class UpdatePaymentStatusRequest {
     )
     private String status;
 
-    private String transactionCode;
+    private String providerTransactionCode;
 
     private String note;
 }

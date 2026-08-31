@@ -77,6 +77,10 @@ public class OptionServiceImpl implements OptionService {
                 .filter(o -> !STATUS_DELETED.equalsIgnoreCase(o.getStatus()))
                 .orElseThrow(() -> new BusinessException(StatusCode.OPTION_NOT_FOUND));
 
+        // Soft deletion is guarded by deleteOption(), which checks whether
+        // this option is still referenced by a product variant.
+        validateMutableStatus(request.getStatus());
+
         // 2. Validate name uniqueness if changed
         if (!option.getName().equalsIgnoreCase(request.getName()) && optionRepository.existsByName(request.getName())) {
             throw new BusinessException(StatusCode.CONFLICT, "Option with name '" + request.getName() + "' already exists");
@@ -108,5 +112,13 @@ public class OptionServiceImpl implements OptionService {
         option.setStatus(STATUS_DELETED);
         optionRepository.save(option);
         log.info("Soft deleted option with id: {}", id);
+    }
+
+    private void validateMutableStatus(String status) {
+        if (status != null && !"ACTIVE".equalsIgnoreCase(status)
+                && !"INACTIVE".equalsIgnoreCase(status)) {
+            throw new BusinessException(StatusCode.BAD_REQUEST,
+                    "Only ACTIVE or INACTIVE is allowed here; use the delete endpoint for DELETED");
+        }
     }
 }

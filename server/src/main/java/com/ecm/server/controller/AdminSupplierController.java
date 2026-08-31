@@ -27,7 +27,7 @@ public class AdminSupplierController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<CursorPageResponse<SupplierResponse>>> getSuppliers(
-            @ModelAttribute SupplierFilterRequest request
+            @Valid @ModelAttribute SupplierFilterRequest request
     ) {
         CursorPageResponse<SupplierResponse> response = supplierService.getSuppliers(request);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));

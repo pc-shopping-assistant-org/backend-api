@@ -25,6 +25,6 @@ public class UpdateOptionRequest {
     @NotBlank(message = "Option value is required")
     private String value;
 
-    @Pattern(regexp = "^(ACTIVE|INACTIVE|DELETED)$", message = "Status must be ACTIVE, INACTIVE, or DELETED")
+    @Pattern(regexp = "^(ACTIVE|INACTIVE)$", message = "Status must be ACTIVE or INACTIVE; use the delete endpoint for DELETED")
     private String status;
 }

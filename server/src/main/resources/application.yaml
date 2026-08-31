@@ -73,11 +73,26 @@ spring:
     baseline-version: 0
     validate-on-migrate: true
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  packages-to-scan: com.ecm.server.controller
+
 # JWT Security Configuration
 jwt:
   secret-key: ${JWT_SECRET_KEY:dGhpc19pc19hX3Zlcnlfc2VjdXJlX2tleV9mb3Jfand0X3NpZ25pbmdfYXV0aGVudGljYXRpb25fMjAyNg==}
   access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION:86400000} # 24 hours
   refresh-token-expiration-ms: ${JWT_REFRESH_EXPIRATION:604800000} # 7 days
+
+# Stripe payment provider configuration. When the secret key is blank, local
+# checkout uses a deterministic mock intent; when a webhook secret is set,
+# webhook signatures are mandatory.
+stripe:
+  secret-key: ${STRIPE_SECRET_KEY:}
+  publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
 
 # Spring Boot Actuator Configuration
 management:

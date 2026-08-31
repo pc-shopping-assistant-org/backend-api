@@ -1,5 +1,6 @@
 package com.ecm.server.dto.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,13 +16,9 @@ import java.util.*;
 @AllArgsConstructor
 public class CreateProductVariantRequest {
 
-    @NotNull(message = "Price is required")
-    @Min(value = 0, message = "Price cannot be negative")
-    private Integer price;
-
-    @NotNull(message = "Sale price is required")
-    @Min(value = 0, message = "Sale price cannot be negative")
-    private Integer priceSale;
+    @NotNull(message = "List price is required")
+    @Min(value = 0, message = "List price cannot be negative")
+    private Long listPrice;
 
     @NotNull(message = "Quantity is required")
     @Min(value = 0, message = "Quantity cannot be negative")
@@ -35,22 +32,17 @@ public class CreateProductVariantRequest {
     @Size(max = 100, message = "Model cannot exceed 100 characters")
     private String model;
 
-    @Pattern(regexp = "^(DENY|CONTINUE|BACKORDER)$", message = "Inventory policy must be DENY, CONTINUE, or BACKORDER")
-    @Builder.Default
-    private String inventoryPolicy = "DENY";
-
-    @Builder.Default
-    private Map<String, Object> specifications = new HashMap<>();
-
     private String description;
 
     @Size(max = 100, message = "Warranty cannot exceed 100 characters")
+    @Pattern(
+            regexp = "^\\s*(?:[1-9][0-9]*\\s*(?:(?i:months?)|tháng)?\\s*)?$",
+            message = "Warranty must be a positive number of months"
+    )
     private String warranty;
 
     @Size(max = 100, message = "Barcode cannot exceed 100 characters")
     private String barcode;
-
-    private String imageUrl;
 
     private LocalDate releaseAt;
 
@@ -58,5 +50,5 @@ public class CreateProductVariantRequest {
     private List<UUID> optionIds = new ArrayList<>();
 
     @Builder.Default
-    private List<CreateProductImageRequest> images = new ArrayList<>();
+    private List<@Valid CreateProductImageRequest> images = new ArrayList<>();
 }

@@ -22,6 +22,5 @@ public class ValidateDiscountRequest {
     @Min(value = 0, message = "Order amount cannot be negative")
     private Long orderAmount;
 
-    @Valid
-    private List<OrderItemValidateDto> items;
+    private List<@Valid OrderItemValidateDto> items;
 }

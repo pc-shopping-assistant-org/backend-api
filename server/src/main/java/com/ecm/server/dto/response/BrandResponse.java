@@ -17,6 +17,7 @@ public class BrandResponse {
     private String name;
     private String description;
     private String logoUrl;
+    private UUID imageFileId;
     private String status;
     private Instant createdAt;
 }

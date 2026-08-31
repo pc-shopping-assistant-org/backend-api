@@ -24,4 +24,8 @@ public class ChangePasswordRequest {
             message = "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     )
     private String newPassword;
+
+    @NotBlank(message = "OTP code is required")
+    @Pattern(regexp = "^[0-9]{6}$", message = "OTP must be a 6-digit number")
+    private String otp;
 }

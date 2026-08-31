@@ -26,12 +26,13 @@ public enum StatusCode {
     VALIDATION_ERROR(40001, "Input validation failed", HttpStatus.BAD_REQUEST),
     MISSING_REQUIRED_PARAMETER(40002, "Missing required request parameter", HttpStatus.BAD_REQUEST),
     MALFORMED_JSON(40003, "Malformed JSON request body", HttpStatus.BAD_REQUEST),
+    METHOD_NOT_ALLOWED(40500, "HTTP method is not allowed for this endpoint", HttpStatus.METHOD_NOT_ALLOWED),
 
     // =====================================================================
     // 3. Authentication & Authorization Codes (401xx, 403xx)
     // =====================================================================
     UNAUTHORIZED(40100, "Unauthorized access, please login", HttpStatus.UNAUTHORIZED),
-    INVALID_CREDENTIALS(40101, "Invalid username or password", HttpStatus.UNAUTHORIZED),
+    INVALID_CREDENTIALS(40101, "Invalid email/phone or password", HttpStatus.UNAUTHORIZED),
     TOKEN_EXPIRED(40102, "Token has expired", HttpStatus.UNAUTHORIZED),
     TOKEN_INVALID(40103, "Invalid authentication token", HttpStatus.UNAUTHORIZED),
     FORBIDDEN(40300, "Access denied, you do not have permission", HttpStatus.FORBIDDEN),
@@ -58,16 +59,17 @@ public enum StatusCode {
     CATEGORY_ATTRIBUTE_NOT_FOUND(40414, "Category attribute assignment not found", HttpStatus.NOT_FOUND),
     IMAGE_NOT_FOUND(40415, "Product image not found", HttpStatus.NOT_FOUND),
     SUPPLIER_NOT_FOUND(40416, "Supplier not found", HttpStatus.NOT_FOUND),
+    ADDRESS_NOT_FOUND(40417, "Customer address not found", HttpStatus.NOT_FOUND),
 
     // =====================================================================
     // 5. Conflict & Business Rule Codes (409xx, 422xx)
     // =====================================================================
     CONFLICT(40900, "Resource conflict occurred", HttpStatus.CONFLICT),
-    USERNAME_ALREADY_EXISTS(40901, "Username already exists", HttpStatus.CONFLICT),
     EMAIL_ALREADY_EXISTS(40902, "Email already in use", HttpStatus.CONFLICT),
     PHONE_ALREADY_EXISTS(40903, "Phone number already in use", HttpStatus.CONFLICT),
     SKU_ALREADY_EXISTS(40904, "Product variant SKU already exists", HttpStatus.CONFLICT),
     DISCOUNT_CODE_ALREADY_EXISTS(40905, "Discount coupon code already exists", HttpStatus.CONFLICT),
+    DATA_INTEGRITY_VIOLATION(40906, "Resource violates a data integrity rule", HttpStatus.CONFLICT),
 
     INSUFFICIENT_STOCK(42201, "Insufficient product stock quantity", HttpStatus.UNPROCESSABLE_CONTENT),
     DISCOUNT_EXPIRED(42202, "Discount code has expired or is not yet active", HttpStatus.UNPROCESSABLE_CONTENT),

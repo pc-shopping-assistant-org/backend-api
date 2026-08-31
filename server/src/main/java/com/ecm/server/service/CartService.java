@@ -10,11 +10,21 @@ public interface CartService {
 
     CartResponse getCart(UUID accountId);
 
+    CartResponse getCart(UUID accountId, String sessionToken);
+
     CartResponse addToCart(UUID accountId, AddToCartRequest request);
+
+    CartResponse addToCart(UUID accountId, String sessionToken, AddToCartRequest request);
 
     CartResponse updateCartItem(UUID accountId, UUID variantId, UpdateCartItemRequest request);
 
+    CartResponse updateCartItem(UUID accountId, String sessionToken, UUID variantId, UpdateCartItemRequest request);
+
     CartResponse removeCartItem(UUID accountId, UUID variantId);
 
+    CartResponse removeCartItem(UUID accountId, String sessionToken, UUID variantId);
+
     void clearCart(UUID accountId);
+
+    void clearCart(UUID accountId, String sessionToken);
 }

@@ -27,14 +27,14 @@ public class Discount {
     @GeneratedValue
     private UUID id;
 
-    @Column(name = "code", nullable = false, unique = true, length = 50)
+    @Column(name = "code", unique = true, length = 50)
     private String code;
 
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 
-    @Column(name = "type", nullable = false, length = 10)
-    private String type; // PERCENT, FIXED
+    @Column(name = "discount_type", nullable = false, length = 10)
+    private String discountType; // PERCENT, FIXED
 
     @Column(name = "value", nullable = false)
     private Integer value;
@@ -45,8 +45,8 @@ public class Discount {
     @Column(name = "end_at", nullable = false)
     private Instant endAt;
 
-    @Column(name = "scope", nullable = false, length = 50)
-    private String scope; // ALL, PRODUCT, CATEGORY, ORDER
+    @Column(name = "application_scope", nullable = false, length = 20)
+    private String applicationScope; // ORDER, ALL_ITEMS, CATEGORY, VARIANT
 
     @Column(name = "min_order_amount", nullable = false)
     @Builder.Default
@@ -77,5 +77,10 @@ public class Discount {
 
     @OneToMany(mappedBy = "discount", fetch = FetchType.LAZY)
     @Builder.Default
-    private Set<DiscountProductVariant> discountProductVariants = new LinkedHashSet<>();
+    private Set<DiscountCategory> discountCategories = new LinkedHashSet<>();
+
+    @OneToMany(mappedBy = "discount", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<DiscountVariant> discountVariants = new LinkedHashSet<>();
+
 }

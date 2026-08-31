@@ -26,6 +26,6 @@ public class UpdateCategoryRequest {
 
     private UUID parentId;
 
-    @Pattern(regexp = "^(ACTIVE|INACTIVE|DELETED)$", message = "Status must be ACTIVE, INACTIVE, or DELETED")
+    @Pattern(regexp = "^(ACTIVE|INACTIVE)$", message = "Status must be ACTIVE or INACTIVE; use the delete endpoint for DELETED")
     private String status;
 }

@@ -26,9 +26,9 @@ public class InvoiceResponse {
     private List<OrderItemDetailResponse> items = Collections.emptyList();
 
     private Long subtotalAmount;
-    private Integer discountAmount;
-    private Integer shipAmount;
+    private Long discountAmount;
+    private Long shippingFee;
     private Long totalAmount;
-    private String paymentMethod;
+    private String paymentMethodCode;
     private String paymentStatus;
 }

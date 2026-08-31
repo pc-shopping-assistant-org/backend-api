@@ -22,5 +22,5 @@ public class OrderItemValidateDto {
 
     @NotNull(message = "Unit price is required")
     @Min(value = 0, message = "Unit price cannot be negative")
-    private Integer unitPrice;
+    private Long unitPrice;
 }

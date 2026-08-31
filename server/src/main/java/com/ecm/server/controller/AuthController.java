@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -49,8 +50,13 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<String>> logout(@RequestHeader(value = "Authorization", required = false) String bearerToken) {
-        authService.logout(bearerToken);
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<String>> logout(
+            @RequestHeader(value = "Authorization", required = false) String bearerToken,
+            @Valid @RequestBody(required = false) LogoutRequest request
+    ) {
+        String refreshToken = request == null ? null : request.getRefreshToken();
+        authService.logout(bearerToken, refreshToken == null ? null : refreshToken.trim());
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, "Logged out successfully."));
     }
 

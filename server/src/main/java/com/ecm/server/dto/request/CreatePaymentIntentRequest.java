@@ -19,8 +19,8 @@ public class CreatePaymentIntentRequest {
 
     @NotBlank(message = "Payment method is required")
     @Pattern(
-            regexp = "^(?i)(STRIPE|CREDIT_CARD|COD|VNPAY|MOMO|SEPAY|BANK_TRANSFER)$",
-            message = "Payment method must be one of: STRIPE, CREDIT_CARD, COD, VNPAY, MOMO, SEPAY, BANK_TRANSFER"
+            regexp = "^(?i)STRIPE_CARD$",
+            message = "Payment intent method must be STRIPE_CARD"
     )
     private String paymentMethod;
 }

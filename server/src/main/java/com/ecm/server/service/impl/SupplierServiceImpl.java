@@ -9,7 +9,7 @@ import com.ecm.server.dto.response.SupplierResponse;
 import com.ecm.server.exception.BusinessException;
 import com.ecm.server.mapper.SupplierMapper;
 import com.ecm.server.model.Supplier;
-import com.ecm.server.repository.ProductRepository;
+import com.ecm.server.repository.ProductSupplierRepository;
 import com.ecm.server.repository.SupplierRepository;
 import com.ecm.server.service.SupplierService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Slf4j
@@ -30,7 +31,7 @@ public class SupplierServiceImpl implements SupplierService {
     public static final String STATUS_DELETED = "DELETED";
 
     private final SupplierRepository supplierRepository;
-    private final ProductRepository productRepository;
+    private final ProductSupplierRepository productSupplierRepository;
     private final SupplierMapper supplierMapper;
 
     @Override
@@ -45,11 +46,12 @@ public class SupplierServiceImpl implements SupplierService {
         String keywordPattern = (request.getKeyword() != null && !request.getKeyword().isBlank())
                 ? "%" + request.getKeyword().trim().toLowerCase() + "%"
                 : null;
+        String statusFilter = normalizeEnumFilter(request.getStatus());
 
         Pageable pageable = PageRequest.of(0, queryLimit);
         List<Supplier> suppliers = (cursorUuid == null)
-                ? supplierRepository.findSuppliersInitial(keywordPattern, request.getStatus(), pageable)
-                : supplierRepository.findSuppliersAfterCursor(cursorUuid, keywordPattern, request.getStatus(), pageable);
+                ? supplierRepository.findSuppliersInitial(keywordPattern, statusFilter, pageable)
+                : supplierRepository.findSuppliersAfterCursor(cursorUuid, keywordPattern, statusFilter, pageable);
 
         // 2. Transform entity list to DTO list via MapStruct
         List<SupplierResponse> dtoList = supplierMapper.toResponseList(suppliers);
@@ -100,6 +102,10 @@ public class SupplierServiceImpl implements SupplierService {
                 .filter(s -> !STATUS_DELETED.equalsIgnoreCase(s.getStatus()))
                 .orElseThrow(() -> new BusinessException(StatusCode.NOT_FOUND, "Supplier not found with id: " + id));
 
+        // DELETED must go through deleteSupplier(), which protects the
+        // normalized product-supplier links.
+        validateMutableStatus(request.getStatus());
+
         // 2. Validate email and phone uniqueness if changed
         if (request.getEmail() != null && !request.getEmail().equals(supplier.getEmail()) && supplierRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException(StatusCode.EMAIL_ALREADY_EXISTS);
@@ -125,7 +131,7 @@ public class SupplierServiceImpl implements SupplierService {
                 .orElseThrow(() -> new BusinessException(StatusCode.NOT_FOUND, "Supplier not found with id: " + id));
 
         // 2. Check foreign key constraints: associated products
-        long productCount = productRepository.countBySupplierId(id);
+        long productCount = productSupplierRepository.countBySupplierId(id);
         if (productCount > 0) {
             throw new BusinessException(StatusCode.CONFLICT, "Cannot delete supplier associated with existing products");
         }
@@ -134,5 +140,17 @@ public class SupplierServiceImpl implements SupplierService {
         supplier.setStatus(STATUS_DELETED);
         supplierRepository.save(supplier);
         log.info("Soft deleted supplier with id: {}", id);
+    }
+
+    private void validateMutableStatus(String status) {
+        if (status != null && !"ACTIVE".equalsIgnoreCase(status)
+                && !"INACTIVE".equalsIgnoreCase(status)) {
+            throw new BusinessException(StatusCode.BAD_REQUEST,
+                    "Only ACTIVE or INACTIVE is allowed here; use the delete endpoint for DELETED");
+        }
+    }
+
+    private String normalizeEnumFilter(String value) {
+        return value == null || value.isBlank() ? null : value.trim().toUpperCase(Locale.ROOT);
     }
 }

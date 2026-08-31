@@ -13,8 +13,8 @@ public class UpdateOrderStatusRequest {
 
     @NotBlank(message = "Order status is required")
     @Pattern(
-            regexp = "^(?i)(PENDING|CONFIRM|SHIPPING|COMPLETED|CANCELLED)$",
-            message = "Status must be one of: PENDING, CONFIRM, SHIPPING, COMPLETED, CANCELLED"
+            regexp = "^(?i)(PENDING_PAYMENT|PENDING_CONFIRMATION|CONFIRMED|SHIPPING|COMPLETED|CANCELLED)$",
+            message = "Status must be one of: PENDING_PAYMENT, PENDING_CONFIRMATION, CONFIRMED, SHIPPING, COMPLETED, CANCELLED"
     )
     private String status;
 

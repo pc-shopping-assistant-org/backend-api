@@ -7,6 +7,7 @@ import com.ecm.server.config.security.UserPrincipal;
 import com.ecm.server.dto.request.CreateDiscountRequest;
 import com.ecm.server.dto.request.DiscountFilterRequest;
 import com.ecm.server.dto.request.UpdateDiscountRequest;
+import com.ecm.server.dto.request.UpdateDiscountStatusRequest;
 import com.ecm.server.dto.response.DiscountDetailResponse;
 import com.ecm.server.dto.response.DiscountSummaryResponse;
 import com.ecm.server.service.AdminDiscountService;
@@ -30,7 +31,7 @@ public class AdminDiscountController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<CursorPageResponse<DiscountSummaryResponse>>> getAdminDiscounts(
-            @ModelAttribute DiscountFilterRequest filter
+            @Valid @ModelAttribute DiscountFilterRequest filter
     ) {
         CursorPageResponse<DiscountSummaryResponse> response = adminDiscountService.getAdminDiscounts(filter);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));
@@ -66,7 +67,7 @@ public class AdminDiscountController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<ApiResponse<String>> updateDiscountStatus(
             @PathVariable UUID id,
-            @Valid @RequestBody com.ecm.server.dto.request.UpdateStatusRequest request,
+            @Valid @RequestBody UpdateDiscountStatusRequest request,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         UUID adminId = (principal != null) ? principal.getAccountId() : null;

@@ -53,10 +53,16 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         // Public Auth Endpoints
+                        // Logout is the exception: the caller must present the
+                        // active access token that is being revoked.
+                        .requestMatchers("/api/v1/auth/logout").authenticated()
                         .requestMatchers("/api/v1/auth/**").permitAll()
 
                         // Actuator & Health Check Endpoints
                         .requestMatchers("/actuator/**").permitAll()
+
+                        // OpenAPI/Swagger documentation
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
 
                         // Public Catalog Browsing Endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/**").permitAll()
@@ -65,8 +71,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/attributes", "/api/v1/attributes/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/options", "/api/v1/options/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/discounts", "/api/v1/discounts/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payment-methods").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/*/reviews").permitAll()
                         .requestMatchers("/api/v1/ai/**").permitAll()
+                        .requestMatchers("/api/v1/cart/**").permitAll()
 
                         // Webhook endpoints
                         .requestMatchers("/api/v1/payments/webhook/**").permitAll()

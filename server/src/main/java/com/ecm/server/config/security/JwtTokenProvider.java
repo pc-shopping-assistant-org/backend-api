@@ -33,12 +33,12 @@ public class JwtTokenProvider {
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateAccessToken(UUID accountId, String username, String role, UUID employeeId) {
+    public String generateAccessToken(UUID accountId, String identifier, String role, UUID employeeId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtProperties.getAccessTokenExpirationMs());
 
         var builder = Jwts.builder()
-                .subject(username)
+                .subject(identifier)
                 .claim("accountId", accountId != null ? accountId.toString() : null)
                 .claim("role", role)
                 .claim("status", "ACTIVE")
@@ -53,16 +53,16 @@ public class JwtTokenProvider {
         return builder.compact();
     }
 
-    public String generateAccessToken(UUID accountId, String username, String role) {
-        return generateAccessToken(accountId, username, role, null);
+    public String generateAccessToken(UUID accountId, String identifier, String role) {
+        return generateAccessToken(accountId, identifier, role, null);
     }
 
-    public String generateRefreshToken(UUID accountId, String username) {
+    public String generateRefreshToken(UUID accountId, String identifier) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtProperties.getRefreshTokenExpirationMs());
 
         return Jwts.builder()
-                .subject(username)
+                .subject(identifier)
                 .claim("accountId", accountId != null ? accountId.toString() : null)
                 .claim("type", "REFRESH")
                 .issuedAt(now)
@@ -73,7 +73,7 @@ public class JwtTokenProvider {
 
     public UserPrincipal getUserPrincipalFromToken(String token) {
         Claims claims = getClaimsFromToken(token);
-        String username = claims.getSubject();
+        String identifier = claims.getSubject();
         String accountIdStr = claims.get("accountId", String.class);
         String employeeIdStr = claims.get("employeeId", String.class);
         String role = claims.get("role", String.class);
@@ -92,7 +92,7 @@ public class JwtTokenProvider {
         return UserPrincipal.builder()
                 .accountId(accountId)
                 .employeeId(employeeId)
-                .username(username)
+                .username(identifier)
                 .role(role)
                 .status(status)
                 .authorities(authorities)
@@ -101,6 +101,14 @@ public class JwtTokenProvider {
 
     public String getUsernameFromToken(String token) {
         return getClaimsFromToken(token).getSubject();
+    }
+
+    public String getIdentifierFromToken(String token) {
+        return getClaimsFromToken(token).getSubject();
+    }
+
+    public boolean isRefreshToken(String token) {
+        return "REFRESH".equals(getClaimsFromToken(token).get("type", String.class));
     }
 
     public UUID getAccountIdFromToken(String token) {

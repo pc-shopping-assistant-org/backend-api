@@ -123,7 +123,16 @@ public class CategoryServiceImpl implements CategoryService {
                 .filter(c -> !STATUS_DELETED.equalsIgnoreCase(c.getStatus()))
                 .orElseThrow(() -> new BusinessException(StatusCode.CATEGORY_NOT_FOUND));
 
+        // DELETED is reserved for deleteCategory(), which checks children and
+        // products before soft-deleting the category.
+        validateMutableStatus(request.getStatus());
+
         // 2. Validate SEO name uniqueness if changed
+        if (!category.getName().equalsIgnoreCase(request.getName())
+                && categoryRepository.existsByName(request.getName())) {
+            throw new BusinessException(StatusCode.CONFLICT,
+                    "Category with name '" + request.getName() + "' already exists");
+        }
         if (!category.getSeoName().equals(request.getSeoName()) && categoryRepository.existsBySeoName(request.getSeoName())) {
             throw new BusinessException(StatusCode.CONFLICT, "Category with SEO slug '" + request.getSeoName() + "' already exists");
         }
@@ -137,6 +146,10 @@ public class CategoryServiceImpl implements CategoryService {
             parent = categoryRepository.findById(request.getParentId())
                     .filter(c -> !STATUS_DELETED.equalsIgnoreCase(c.getStatus()))
                     .orElseThrow(() -> new BusinessException(StatusCode.CATEGORY_NOT_FOUND, "Parent category not found"));
+            if (wouldCreateCycle(id, parent)) {
+                throw new BusinessException(StatusCode.CONFLICT,
+                        "A category cannot be moved below one of its descendants");
+            }
         }
 
         // 4. Update entity fields via MapStruct @MappingTarget
@@ -146,6 +159,26 @@ public class CategoryServiceImpl implements CategoryService {
 
         // 5. Return updated category response DTO
         return categoryMapper.toResponse(updatedCategory);
+    }
+
+    private boolean wouldCreateCycle(UUID categoryId, Category proposedParent) {
+        Set<UUID> visited = new HashSet<>();
+        Category current = proposedParent;
+        while (current != null && current.getId() != null && visited.add(current.getId())) {
+            if (categoryId.equals(current.getId())) {
+                return true;
+            }
+            current = current.getParent();
+        }
+        return false;
+    }
+
+    private void validateMutableStatus(String status) {
+        if (status != null && !"ACTIVE".equalsIgnoreCase(status)
+                && !"INACTIVE".equalsIgnoreCase(status)) {
+            throw new BusinessException(StatusCode.BAD_REQUEST,
+                    "Only ACTIVE or INACTIVE is allowed here; use the delete endpoint for DELETED");
+        }
     }
 
     @Override

@@ -53,7 +53,7 @@ class AdminRoleControllerTest {
         mockMvc.perform(get("/api/v1/admin/roles")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data[0].name").value("ROLE_ADMIN"));
     }
 }

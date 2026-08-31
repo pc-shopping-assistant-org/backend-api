@@ -22,7 +22,7 @@ public class DiscountController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<CursorPageResponse<DiscountSummaryResponse>>> getActiveDiscounts(
-            @ModelAttribute DiscountFilterRequest filter
+            @Valid @ModelAttribute DiscountFilterRequest filter
     ) {
         CursorPageResponse<DiscountSummaryResponse> response = discountService.getActiveDiscounts(filter);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));

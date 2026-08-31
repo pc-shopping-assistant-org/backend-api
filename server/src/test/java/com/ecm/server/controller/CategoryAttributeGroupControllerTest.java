@@ -66,7 +66,7 @@ class CategoryAttributeGroupControllerTest {
         mockMvc.perform(get("/api/v1/categories/{categoryId}/specs-schema", categoryId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.categoryName").value("Smartphones"))
                 .andExpect(jsonPath("$.data.groups[0].groupName").value("Display"));
     }
@@ -94,8 +94,7 @@ class CategoryAttributeGroupControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.code").value(20100))
+                .andExpect(jsonPath("$.message").value("CREATED"))
                 .andExpect(jsonPath("$.data.name").value("Camera"));
     }
 
@@ -125,7 +124,7 @@ class CategoryAttributeGroupControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("CREATED"))
                 .andExpect(jsonPath("$.data.attributeKey").value("main_camera"));
     }
 }

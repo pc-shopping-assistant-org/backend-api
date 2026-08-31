@@ -50,8 +50,8 @@ class ProductControllerTest {
                 .id(productId)
                 .name("iPhone 16 Pro Max")
                 .seoName("iphone-16-pro-max")
-                .minPrice(34990000)
-                .maxPrice(46990000)
+                .minPrice(34990000L)
+                .maxPrice(46990000L)
                 .build();
 
         CursorPageResponse<ProductSummaryResponse> page = CursorPageResponse.<ProductSummaryResponse>builder()
@@ -65,7 +65,7 @@ class ProductControllerTest {
         mockMvc.perform(get("/api/v1/products")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.items[0].name").value("iPhone 16 Pro Max"));
     }
 
@@ -84,7 +84,25 @@ class ProductControllerTest {
         mockMvc.perform(get("/api/v1/products/{id}", productId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.seoName").value("iphone-16-pro-max"));
+    }
+
+    @Test
+    void getProducts_whenPriceRangeIsReversed_shouldReturnStaticValidationError() throws Exception {
+        mockMvc.perform(get("/api/v1/products")
+                        .queryParam("minPrice", "50000000")
+                        .queryParam("maxPrice", "10000000"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors").isArray());
+    }
+
+    @Test
+    void getProducts_whenLimitIsOutOfRange_shouldReturnStaticValidationError() throws Exception {
+        mockMvc.perform(get("/api/v1/products").queryParam("limit", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors[0].field").value("limit"));
     }
 }

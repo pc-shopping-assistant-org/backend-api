@@ -23,8 +23,19 @@ public interface DiscountRepository extends JpaRepository<Discount, UUID> {
 
     @Query("""
                 SELECT d FROM Discount d
-                LEFT JOIN FETCH d.discountProductVariants dpv
-                LEFT JOIN FETCH dpv.productVariant pv
+                WHERE d.status = 'ACTIVE'
+                  AND d.code IS NULL
+                  AND d.startAt <= :now
+                  AND d.endAt >= :now
+                  AND d.applicationScope IN ('ALL_ITEMS', 'CATEGORY', 'VARIANT')
+                ORDER BY d.id DESC
+            """)
+    List<Discount> findActiveAutomatic(@Param("now") Instant now);
+
+    @Query("""
+                SELECT d FROM Discount d
+                LEFT JOIN FETCH d.discountVariants dv
+                LEFT JOIN FETCH dv.variant pv
                 LEFT JOIN FETCH pv.product
                 WHERE d.id = :id AND d.status <> :deletedStatus
             """)
@@ -35,8 +46,8 @@ public interface DiscountRepository extends JpaRepository<Discount, UUID> {
                 WHERE d.status = 'ACTIVE'
                   AND d.startAt <= :now
                   AND d.endAt >= :now
-                  AND (:type IS NULL OR d.type = :type)
-                  AND (:scope IS NULL OR d.scope = :scope)
+                  AND (:type IS NULL OR d.discountType = :type)
+                  AND (:scope IS NULL OR d.applicationScope = :scope)
                   AND (:keyword IS NULL OR LOWER(d.code) LIKE :keyword OR LOWER(d.title) LIKE :keyword)
                 ORDER BY d.id DESC
             """)
@@ -54,8 +65,8 @@ public interface DiscountRepository extends JpaRepository<Discount, UUID> {
                   AND d.status = 'ACTIVE'
                   AND d.startAt <= :now
                   AND d.endAt >= :now
-                  AND (:type IS NULL OR d.type = :type)
-                  AND (:scope IS NULL OR d.scope = :scope)
+                  AND (:type IS NULL OR d.discountType = :type)
+                  AND (:scope IS NULL OR d.applicationScope = :scope)
                   AND (:keyword IS NULL OR LOWER(d.code) LIKE :keyword OR LOWER(d.title) LIKE :keyword)
                 ORDER BY d.id DESC
             """)
@@ -71,8 +82,8 @@ public interface DiscountRepository extends JpaRepository<Discount, UUID> {
     @Query("""
                 SELECT d FROM Discount d
                 WHERE (:status IS NULL AND d.status <> 'DELETED' OR d.status = :status)
-                  AND (:type IS NULL OR d.type = :type)
-                  AND (:scope IS NULL OR d.scope = :scope)
+                  AND (:type IS NULL OR d.discountType = :type)
+                  AND (:scope IS NULL OR d.applicationScope = :scope)
                   AND (:keyword IS NULL OR LOWER(d.code) LIKE :keyword OR LOWER(d.title) LIKE :keyword)
                 ORDER BY d.id DESC
             """)
@@ -88,8 +99,8 @@ public interface DiscountRepository extends JpaRepository<Discount, UUID> {
                 SELECT d FROM Discount d
                 WHERE d.id < :cursor
                   AND (:status IS NULL AND d.status <> 'DELETED' OR d.status = :status)
-                  AND (:type IS NULL OR d.type = :type)
-                  AND (:scope IS NULL OR d.scope = :scope)
+                  AND (:type IS NULL OR d.discountType = :type)
+                  AND (:scope IS NULL OR d.applicationScope = :scope)
                   AND (:keyword IS NULL OR LOWER(d.code) LIKE :keyword OR LOWER(d.title) LIKE :keyword)
                 ORDER BY d.id DESC
             """)

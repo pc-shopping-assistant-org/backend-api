@@ -15,11 +15,11 @@ public class DiscountSummaryResponse {
     private UUID id;
     private String code;
     private String title;
-    private String type;
+    private String discountType;
     private Integer value;
     private Instant startAt;
     private Instant endAt;
-    private String scope;
+    private String applicationScope;
     private Long minOrderAmount;
     private String description;
     private String status;

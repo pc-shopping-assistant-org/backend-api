@@ -49,7 +49,6 @@ class AdminCustomerControllerTest {
         UUID customerId = UUID.randomUUID();
         CustomerDetailResponse detail = CustomerDetailResponse.builder()
                 .id(customerId)
-                .username("cust1")
                 .fullName("Customer One")
                 .email("cust1@example.com")
                 .status("ACTIVE")
@@ -69,8 +68,8 @@ class AdminCustomerControllerTest {
                         .param("limit", "10")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.items[0].username").value("cust1"));
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.items[0].email").value("cust1@example.com"));
     }
 
     @Test
@@ -80,8 +79,8 @@ class AdminCustomerControllerTest {
                 .orderId(UUID.randomUUID())
                 .orderTime(Instant.now())
                 .totalAmount(150000L)
-                .discountAmount(0)
-                .shipAmount(30000)
+                .discountAmount(0L)
+                .shippingFee(30000L)
                 .status("COMPLETED")
                 .deliveryAddress("123 Test Street")
                 .build();
@@ -91,7 +90,18 @@ class AdminCustomerControllerTest {
         mockMvc.perform(get("/api/v1/admin/customers/" + customerId + "/orders")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data[0].totalAmount").value(150000));
+    }
+
+    @Test
+    void getCustomers_withInvalidLimit_shouldReturnCanonicalValidationError() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/customers")
+                        .param("limit", "0")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.data").doesNotExist())
+                .andExpect(jsonPath("$.message").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors[0].field").value("limit"));
     }
 }

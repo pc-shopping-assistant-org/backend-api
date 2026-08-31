@@ -16,5 +16,6 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID>, JpaSpec
 
     Optional<Payment> findFirstByOrderIdOrderByCreatedAtDesc(UUID orderId);
 
-    Optional<Payment> findByTransactionCode(String transactionCode);
+    Optional<Payment> findByProviderTransactionCode(String transactionCode);
+
 }

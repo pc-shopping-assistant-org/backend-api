@@ -63,7 +63,7 @@ class OrderControllerTest {
                 .recipientName("Nguyen Van A")
                 .recipientPhone("0987654321")
                 .deliveryAddress("123 Le Loi, TP.HCM")
-                .status("PENDING")
+                .status("PENDING_CONFIRMATION")
                 .totalAmount(34990000L)
                 .build();
 
@@ -73,9 +73,8 @@ class OrderControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.code").value(20100))
-                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andExpect(jsonPath("$.message").value("CREATED"))
+                .andExpect(jsonPath("$.data.status").value("PENDING_CONFIRMATION"))
                 .andExpect(jsonPath("$.data.totalAmount").value(34990000));
     }
 }

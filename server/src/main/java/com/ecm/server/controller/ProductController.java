@@ -8,6 +8,7 @@ import com.ecm.server.dto.response.ProductDetailResponse;
 import com.ecm.server.dto.response.ProductSummaryResponse;
 import com.ecm.server.dto.response.ProductVariantResponse;
 import com.ecm.server.service.ProductService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +24,7 @@ public class ProductController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<CursorPageResponse<ProductSummaryResponse>>> getProducts(
-            @ModelAttribute ProductFilterRequest filter
+            @Valid @ModelAttribute ProductFilterRequest filter
     ) {
         CursorPageResponse<ProductSummaryResponse> response = productService.getProducts(filter);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));

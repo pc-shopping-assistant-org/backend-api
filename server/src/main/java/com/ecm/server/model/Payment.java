@@ -29,14 +29,18 @@ public class Payment {
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
-    @Column(name = "method", nullable = false, length = 100)
-    private String method; // COD, VNPAY, MOMO, SEPAY, BANK_TRANSFER
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "payment_method_id", nullable = false)
+    private PaymentMethod paymentMethod;
+
+    @Column(name = "amount", nullable = false)
+    private Long amount;
 
     @Column(name = "paid_at")
     private Instant paidAt;
 
-    @Column(name = "transaction_code", unique = true, length = 100)
-    private String transactionCode;
+    @Column(name = "provider_transaction_code", unique = true, length = 100)
+    private String providerTransactionCode;
 
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
@@ -57,4 +61,5 @@ public class Payment {
     @LastModifiedBy
     @Column(name = "updated_by")
     private UUID updatedBy;
+
 }

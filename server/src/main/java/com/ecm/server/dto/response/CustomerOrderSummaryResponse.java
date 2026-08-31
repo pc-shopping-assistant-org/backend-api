@@ -16,8 +16,8 @@ public class CustomerOrderSummaryResponse {
     private UUID orderId;
     private Instant orderTime;
     private Long totalAmount;
-    private Integer discountAmount;
-    private Integer shipAmount;
+    private Long discountAmount;
+    private Long shippingFee;
     private String status;
     private String deliveryAddress;
     private String recipientName;

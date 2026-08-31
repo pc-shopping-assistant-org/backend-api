@@ -20,13 +20,9 @@ public class ProductReview {
     @GeneratedValue
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
-    private Customer customer;
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "order_item_id", nullable = false, unique = true)
+    private OrderItem orderItem;
 
     @Column(name = "rating", nullable = false)
     private Integer rating;
@@ -36,9 +32,10 @@ public class ProductReview {
 
     @Column(name = "status", nullable = false, length = 15)
     @Builder.Default
-    private String status = "ACTIVE"; // ACTIVE, INACTIVE, DELETED
+    private String status = "ACTIVE";
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
 }

@@ -23,5 +23,6 @@ public class VerifyOtpRequest {
     private String otp;
 
     @Builder.Default
+    @Pattern(regexp = "(?i)REGISTRATION", message = "Purpose must be REGISTRATION")
     private String purpose = "REGISTRATION"; // Default to REGISTRATION if not provided
 }

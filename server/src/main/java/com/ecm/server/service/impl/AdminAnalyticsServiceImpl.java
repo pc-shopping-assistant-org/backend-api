@@ -6,6 +6,7 @@ import com.ecm.server.model.Order;
 import com.ecm.server.repository.CustomerRepository;
 import com.ecm.server.repository.OrderItemRepository;
 import com.ecm.server.repository.OrderRepository;
+import com.ecm.server.repository.ProductImageRepository;
 import com.ecm.server.service.AdminAnalyticsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ public class AdminAnalyticsServiceImpl implements AdminAnalyticsService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final CustomerRepository customerRepository;
+    private final ProductImageRepository productImageRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -51,7 +53,8 @@ public class AdminAnalyticsServiceImpl implements AdminAnalyticsService {
         // 2. Calculate current and previous month customer registration and revenue growth
         LocalDate now = LocalDate.now(ZoneOffset.UTC);
         Instant startOfThisMonth = now.withDayOfMonth(1).atStartOfDay(ZoneOffset.UTC).toInstant();
-        Instant endOfThisMonth = now.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        Instant endOfThisMonth = now.plusMonths(1).withDayOfMonth(1)
+                .atStartOfDay(ZoneOffset.UTC).toInstant();
 
         Long newCustomersThisMonth = customerRepository.countNewCustomersBetween(startOfThisMonth, endOfThisMonth);
 
@@ -101,6 +104,11 @@ public class AdminAnalyticsServiceImpl implements AdminAnalyticsService {
                 case "MONTH" -> toDate.minusMonths(11);
                 default -> toDate.minusDays(29);
             };
+        }
+        if (fromDate.isAfter(toDate)) {
+            throw new com.ecm.server.exception.BusinessException(
+                    com.ecm.server.common.StatusCode.VALIDATION_ERROR,
+                    "Analytics start date must be before or equal to end date");
         }
 
         Instant fromInstant = fromDate.atStartOfDay(ZoneOffset.UTC).toInstant();
@@ -174,6 +182,11 @@ public class AdminAnalyticsServiceImpl implements AdminAnalyticsService {
     @Override
     @Transactional(readOnly = true)
     public List<TopSellingProductResponse> getTopSellingProducts(Integer limit, LocalDate fromDate, LocalDate toDate) {
+        if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+            throw new com.ecm.server.exception.BusinessException(
+                    com.ecm.server.common.StatusCode.VALIDATION_ERROR,
+                    "Analytics start date must be before or equal to end date");
+        }
         // 1. Resolve query bounds and pagination
         int topLimit = (limit != null && limit > 0) ? Math.min(limit, MAX_TOP_LIMIT) : DEFAULT_TOP_LIMIT;
         Instant fromInstant = (fromDate != null) ? fromDate.atStartOfDay(ZoneOffset.UTC).toInstant() : null;
@@ -185,10 +198,14 @@ public class AdminAnalyticsServiceImpl implements AdminAnalyticsService {
         // 3. Map aggregate projections to TopSellingProductResponse
         List<TopSellingProductResponse> results = new ArrayList<>();
         for (Object[] row : rows) {
+            String imageUrl = productImageRepository.findActiveForProduct((UUID) row[0]).stream()
+                    .map(image -> image.getFile() == null ? null : image.getFile().getPublicUrl())
+                    .filter(url -> url != null && !url.isBlank())
+                    .findFirst().orElse(null);
             results.add(TopSellingProductResponse.builder()
                     .productId((UUID) row[0])
                     .productName((String) row[1])
-                    .imageUrl((String) row[2])
+                    .imageUrl(imageUrl)
                     .totalQuantitySold(((Number) row[3]).longValue())
                     .totalRevenue(((Number) row[4]).longValue())
                     .build());

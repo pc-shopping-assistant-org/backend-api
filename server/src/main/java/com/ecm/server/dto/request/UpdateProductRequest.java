@@ -32,15 +32,14 @@ public class UpdateProductRequest {
     @NotNull(message = "Category ID is required")
     private UUID categoryId;
 
-    private UUID supplierId;
+    @Builder.Default
+    private java.util.List<UUID> supplierIds = new java.util.ArrayList<>();
 
     @Builder.Default
     private Map<String, Object> specifications = new HashMap<>();
 
     private String description;
 
-    private String imageUrl;
-
-    @Pattern(regexp = "^(ACTIVE|INACTIVE|DELETED)$", message = "Status must be ACTIVE, INACTIVE, or DELETED")
+    @Pattern(regexp = "^(ACTIVE|INACTIVE)$", message = "Status must be ACTIVE or INACTIVE; use the delete endpoint for DELETED")
     private String status;
 }

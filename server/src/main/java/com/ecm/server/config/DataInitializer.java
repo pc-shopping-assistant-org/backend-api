@@ -5,7 +5,9 @@ import com.ecm.server.model.Employee;
 import com.ecm.server.model.Role;
 import com.ecm.server.repository.AccountRepository;
 import com.ecm.server.repository.EmployeeRepository;
+import com.ecm.server.repository.PaymentMethodRepository;
 import com.ecm.server.repository.RoleRepository;
+import com.ecm.server.repository.ShippingMethodRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -22,6 +24,8 @@ public class DataInitializer implements CommandLineRunner {
     private final AccountRepository accountRepository;
     private final EmployeeRepository employeeRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PaymentMethodRepository paymentMethodRepository;
+    private final ShippingMethodRepository shippingMethodRepository;
 
     @Override
     @Transactional
@@ -30,32 +34,59 @@ public class DataInitializer implements CommandLineRunner {
         Role adminRole = getOrCreateRole("ROLE_ADMIN");
         getOrCreateRole("ROLE_EMPLOYEE");
         getOrCreateRole("ROLE_CUSTOMER");
+        seedPaymentMethods();
+        seedShippingMethods();
 
         // 2. Initialize default admin user if not exists
-        if (!accountRepository.existsByUsername("admin")) {
+        if (!accountRepository.existsByEmailIgnoreCase("admin@ecm.com")) {
             Account adminAccount = Account.builder()
-                    .username("admin")
-                    .password(passwordEncoder.encode("Admin@123"))
+                    .email("admin@ecm.com")
+                    .phone("0900000001")
+                    .passwordHash(passwordEncoder.encode("Admin@123"))
                     .role(adminRole)
                     .status("ACTIVE")
                     .build();
             Account savedAccount = accountRepository.save(adminAccount);
 
             Employee adminEmployee = Employee.builder()
-                    .account(savedAccount)
-                    .fullName("System Administrator")
-                    .email("admin@ecm.com")
-                    .phone("0900000001")
-                    .status("ACTIVE")
+                    .firstName("System")
+                    .lastName("Administrator")
+                    .gender("MALE")
+                    .joinedAt(java.time.LocalDate.now())
                     .build();
+            adminEmployee.setAccount(savedAccount);
             employeeRepository.save(adminEmployee);
 
-            log.info("Initialized default administrator account [admin / Admin@123]");
+            log.info("Initialized default administrator account [admin@ecm.com / Admin@123]");
         }
     }
 
     private Role getOrCreateRole(String name) {
         return roleRepository.findByName(name)
                 .orElseGet(() -> roleRepository.save(Role.builder().name(name).status("ACTIVE").build()));
+    }
+
+    private void seedPaymentMethods() {
+        createPaymentMethodIfMissing("COD", "Cash on delivery");
+        createPaymentMethodIfMissing("STRIPE_CARD", "Stripe card");
+        createPaymentMethodIfMissing("BANK_TRANSFER", "Bank transfer");
+    }
+
+    private void createPaymentMethodIfMissing(String code, String name) {
+        paymentMethodRepository.findByCodeIgnoreCase(code).orElseGet(() ->
+                paymentMethodRepository.save(com.ecm.server.model.PaymentMethod.builder()
+                        .code(code).name(name).status("ACTIVE").build()));
+    }
+
+    private void seedShippingMethods() {
+        createShippingMethodIfMissing("STANDARD", "Standard delivery");
+        createShippingMethodIfMissing("EXPRESS", "Express delivery");
+        createShippingMethodIfMissing("SAME_DAY", "Same-day delivery");
+    }
+
+    private void createShippingMethodIfMissing(String code, String name) {
+        shippingMethodRepository.findByCodeIgnoreCase(code).orElseGet(() ->
+                shippingMethodRepository.save(com.ecm.server.model.ShippingMethod.builder()
+                        .code(code).name(name).status("ACTIVE").build()));
     }
 }

@@ -11,10 +11,10 @@ import java.util.List;
 @Mapper(config = GlobalMapperConfig.class)
 public interface ProductReviewMapper {
 
-    @Mapping(target = "productId", source = "product.id")
-    @Mapping(target = "productName", source = "product.name")
-    @Mapping(target = "customerId", source = "customer.id")
-    @Mapping(target = "customerName", source = "customer.fullName")
+    @Mapping(target = "productId", source = "orderItem.productVariant.product.id")
+    @Mapping(target = "productName", source = "orderItem.productVariant.product.name")
+    @Mapping(target = "customerId", source = "orderItem.order.customer.accountId")
+    @Mapping(target = "customerName", expression = "java(UserMappingSupport.fullName(entity.getOrderItem().getOrder().getCustomer().getFirstName(), entity.getOrderItem().getOrder().getCustomer().getLastName()))")
     @Mapping(target = "isVerifiedPurchase", ignore = true)
     ReviewResponse toResponse(ProductReview entity);
 

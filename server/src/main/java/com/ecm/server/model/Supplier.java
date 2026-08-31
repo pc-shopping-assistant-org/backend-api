@@ -3,6 +3,7 @@ package com.ecm.server.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -23,10 +24,10 @@ public class Supplier {
     @Column(name = "name", nullable = false, unique = true, length = 255)
     private String name;
 
-    @Column(name = "email", nullable = false, unique = true, length = 255)
+    @Column(name = "email", unique = true, length = 255)
     private String email;
 
-    @Column(name = "phone", nullable = false, length = 15)
+    @Column(name = "phone", length = 15)
     private String phone;
 
     @Column(name = "address", length = 255)
@@ -42,4 +43,8 @@ public class Supplier {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 }

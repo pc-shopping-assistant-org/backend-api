@@ -3,9 +3,7 @@ package com.ecm.server.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -32,11 +30,8 @@ public class ProductVariant {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(name = "price", nullable = false)
-    private Integer price;
-
-    @Column(name = "price_sale", nullable = false)
-    private Integer priceSale;
+    @Column(name = "list_price", nullable = false)
+    private Long listPrice;
 
     @Column(name = "quantity", nullable = false)
     @Builder.Default
@@ -48,26 +43,14 @@ public class ProductVariant {
     @Column(name = "model", length = 100)
     private String model;
 
-    @Column(name = "inventory_policy", nullable = false, length = 15)
-    @Builder.Default
-    private String inventoryPolicy = "DENY";
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "specifications", columnDefinition = "jsonb")
-    @Builder.Default
-    private Map<String, Object> specifications = new HashMap<>();
-
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "warranty", length = 100)
-    private String warranty;
+    @Column(name = "warranty_months", nullable = false)
+    private Integer warrantyMonths;
 
     @Column(name = "barcode", unique = true, length = 100)
     private String barcode;
-
-    @Column(name = "image_url", length = 255)
-    private String imageUrl;
 
     @Column(name = "release_at")
     private LocalDate releaseAt;

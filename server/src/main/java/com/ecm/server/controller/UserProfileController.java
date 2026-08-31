@@ -10,12 +10,14 @@ import com.ecm.server.service.UserProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/users/profile")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class UserProfileController {
 
     private final UserProfileService userProfileService;
@@ -44,5 +46,13 @@ public class UserProfileController {
     ) {
         userProfileService.changePassword(userPrincipal.getAccountId(), request);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, "Password changed successfully."));
+    }
+
+    @PostMapping("/change-password/otp")
+    public ResponseEntity<ApiResponse<String>> requestChangePasswordOtp(
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        userProfileService.requestChangePasswordOtp(principal.getAccountId());
+        return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, "Password change OTP sent to email."));
     }
 }

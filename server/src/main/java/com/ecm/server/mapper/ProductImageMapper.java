@@ -15,11 +15,13 @@ public interface ProductImageMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "productVariant", ignore = true)
+    @Mapping(target = "file", ignore = true)
     @Mapping(target = "status", constant = "ACTIVE")
     @Mapping(target = "createdAt", ignore = true)
     ProductImage toEntity(CreateProductImageRequest request);
 
     @Mapping(target = "productVariantId", source = "productVariant.id")
+    @Mapping(target = "imageUrl", source = "file.publicUrl")
     ProductImageResponse toResponse(ProductImage entity);
 
     List<ProductImageResponse> toResponseList(Collection<ProductImage> entities);

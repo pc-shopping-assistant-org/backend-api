@@ -9,6 +9,7 @@ import com.ecm.server.exception.BusinessException;
 import com.ecm.server.mapper.ProductImageMapper;
 import com.ecm.server.mapper.ProductMapper;
 import com.ecm.server.mapper.ProductVariantMapper;
+import com.ecm.server.mapper.SupplierMapper;
 import com.ecm.server.model.*;
 import com.ecm.server.repository.*;
 import com.ecm.server.service.AdminProductService;
@@ -20,7 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -29,14 +32,17 @@ import java.util.UUID;
 public class AdminProductServiceImpl implements AdminProductService {
 
     public static final String STATUS_DELETED = "DELETED";
+    public static final String STATUS_ACTIVE = "ACTIVE";
     public static final int DEFAULT_LIMIT = 20;
 
     private final ProductRepository productRepository;
     private final BrandRepository brandRepository;
     private final CategoryRepository categoryRepository;
     private final SupplierRepository supplierRepository;
+    private final ProductSupplierRepository productSupplierRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ProductImageRepository productImageRepository;
+    private final FileRepository fileRepository;
     private final OptionRepository optionRepository;
     private final VariantOptionRepository variantOptionRepository;
     private final OrderItemRepository orderItemRepository;
@@ -44,10 +50,12 @@ public class AdminProductServiceImpl implements AdminProductService {
     private final ProductMapper productMapper;
     private final ProductVariantMapper productVariantMapper;
     private final ProductImageMapper productImageMapper;
+    private final SupplierMapper supplierMapper;
 
     @Override
     @Transactional(readOnly = true)
     public CursorPageResponse<ProductSummaryResponse> getAdminProducts(ProductFilterRequest filter) {
+        validatePriceRange(filter);
         // 1. Prepare pagination pageable and search parameters
         int pageSize = (filter.getLimit() != null && filter.getLimit() > 0) ? filter.getLimit() : DEFAULT_LIMIT;
         Pageable pageable = PageRequest.of(0, pageSize + 1);
@@ -58,8 +66,10 @@ public class AdminProductServiceImpl implements AdminProductService {
 
         // 2. Fetch products using keyset cursor pagination with eager fetch joins
         List<Product> products = (filter.getCursor() == null)
-                ? productRepository.findAdminInitial(statusFilter, filter.getCategoryId(), filter.getBrandId(), keywordPattern, pageable)
-                : productRepository.findAdminAfterCursor(statusFilter, filter.getCursor(), filter.getCategoryId(), filter.getBrandId(), keywordPattern, pageable);
+                ? productRepository.findAdminInitial(statusFilter, filter.getCategoryId(), filter.getBrandId(),
+                filter.getMinPrice(), filter.getMaxPrice(), keywordPattern, pageable)
+                : productRepository.findAdminAfterCursor(statusFilter, filter.getCursor(), filter.getCategoryId(),
+                filter.getBrandId(), filter.getMinPrice(), filter.getMaxPrice(), keywordPattern, pageable);
 
         // 3. Evaluate next cursor and truncate extra element
         boolean hasNext = products.size() > pageSize;
@@ -70,10 +80,19 @@ public class AdminProductServiceImpl implements AdminProductService {
         List<ProductSummaryResponse> responseList = new ArrayList<>();
         for (Product product : results) {
             ProductSummaryResponse summary = productMapper.toSummaryResponse(product);
+            summary.setSuppliers(product.getProductSuppliers() == null ? List.of() : product.getProductSuppliers().stream()
+                    .map(ProductSupplier::getSupplier)
+                    .filter(java.util.Objects::nonNull)
+                    .map(supplierMapper::toResponse)
+                    .toList());
             List<ProductVariant> variants = productVariantRepository.findByProductIdWithDetails(product.getId(), STATUS_DELETED);
             if (!variants.isEmpty()) {
-                int minPrice = variants.stream().mapToInt(ProductVariant::getPriceSale).min().orElse(0);
-                int maxPrice = variants.stream().mapToInt(ProductVariant::getPrice).max().orElse(0);
+                long minPrice = variants.stream().map(ProductVariant::getListPrice)
+                        .filter(java.util.Objects::nonNull)
+                        .mapToLong(Long::longValue).min().orElse(0L);
+                long maxPrice = variants.stream().map(ProductVariant::getListPrice)
+                        .filter(java.util.Objects::nonNull)
+                        .mapToLong(Long::longValue).max().orElse(0L);
                 summary.setMinPrice(minPrice);
                 summary.setMaxPrice(maxPrice);
             }
@@ -99,31 +118,32 @@ public class AdminProductServiceImpl implements AdminProductService {
 
         // 2. Verify foreign key relations (Category, Brand, Supplier)
         Category category = categoryRepository.findById(request.getCategoryId())
-                .filter(c -> !STATUS_DELETED.equalsIgnoreCase(c.getStatus()))
+                .filter(c -> STATUS_ACTIVE.equalsIgnoreCase(c.getStatus()))
                 .orElseThrow(() -> new BusinessException(StatusCode.CATEGORY_NOT_FOUND));
 
         Brand brand = null;
         if (request.getBrandId() != null) {
             brand = brandRepository.findById(request.getBrandId())
-                    .filter(b -> !STATUS_DELETED.equalsIgnoreCase(b.getStatus()))
+                    .filter(b -> STATUS_ACTIVE.equalsIgnoreCase(b.getStatus()))
                     .orElseThrow(() -> new BusinessException(StatusCode.BRAND_NOT_FOUND));
         }
 
-        Supplier supplier = null;
-        if (request.getSupplierId() != null) {
-            supplier = supplierRepository.findById(request.getSupplierId())
-                    .filter(s -> !STATUS_DELETED.equalsIgnoreCase(s.getStatus()))
-                    .orElseThrow(() -> new BusinessException(StatusCode.SUPPLIER_NOT_FOUND));
-        }
+        List<Supplier> suppliers = resolveSuppliers(request.getSupplierIds());
 
         // 3. Save core Product entity
         UUID employeeId = resolveEmployeeId(adminId);
         Product product = productMapper.toEntity(request);
         product.setCategory(category);
         product.setBrand(brand);
-        product.setSupplier(supplier);
         product.setCreatedBy(employeeId);
         Product savedProduct = productRepository.save(product);
+        for (Supplier selectedSupplier : suppliers) {
+            productSupplierRepository.save(ProductSupplier.builder()
+                    .id(new ProductSupplier.ProductSupplierId(savedProduct.getId(), selectedSupplier.getId()))
+                    .product(savedProduct)
+                    .supplier(selectedSupplier)
+                    .build());
+        }
 
         // 4. Process initial variants if provided
         List<ProductVariant> savedVariants = new ArrayList<>();
@@ -144,10 +164,11 @@ public class AdminProductServiceImpl implements AdminProductService {
 
                 // Link variant options
                 if (variantReq.getOptionIds() != null && !variantReq.getOptionIds().isEmpty()) {
+                    validateOptionTypes(variantReq.getOptionIds());
                     List<VariantOption> variantOptions = new ArrayList<>();
                     for (UUID optionId : variantReq.getOptionIds()) {
                         Option option = optionRepository.findById(optionId)
-                                .filter(o -> !STATUS_DELETED.equalsIgnoreCase(o.getStatus()))
+                                .filter(o -> STATUS_ACTIVE.equalsIgnoreCase(o.getStatus()))
                                 .orElseThrow(() -> new BusinessException(StatusCode.OPTION_NOT_FOUND));
                         VariantOption vo = VariantOption.builder()
                                 .productVariant(savedVariant)
@@ -160,10 +181,13 @@ public class AdminProductServiceImpl implements AdminProductService {
 
                 // Save variant images
                 if (variantReq.getImages() != null && !variantReq.getImages().isEmpty()) {
+                    validateMainImages(variantReq.getImages());
                     List<ProductImage> productImages = new ArrayList<>();
                     for (CreateProductImageRequest imgReq : variantReq.getImages()) {
+                        demoteExistingMainImage(savedVariant, imgReq);
                         ProductImage img = productImageMapper.toEntity(imgReq);
                         img.setProductVariant(savedVariant);
+                        img.setFile(resolveFile(imgReq));
                         productImages.add(productImageRepository.save(img));
                     }
                     savedVariant.setImages(new java.util.LinkedHashSet<>(productImages));
@@ -176,6 +200,7 @@ public class AdminProductServiceImpl implements AdminProductService {
         // 5. Assemble and return full ProductDetailResponse DTO
         ProductDetailResponse response = productMapper.toDetailResponse(savedProduct);
         response.setVariants(productVariantMapper.toResponseList(savedVariants));
+        response.setSuppliers(supplierMapper.toResponseList(suppliers));
         return response;
     }
 
@@ -187,6 +212,10 @@ public class AdminProductServiceImpl implements AdminProductService {
                 .filter(p -> !STATUS_DELETED.equalsIgnoreCase(p.getStatus()))
                 .orElseThrow(() -> new BusinessException(StatusCode.PRODUCT_NOT_FOUND));
 
+        // Soft deletion has its own guarded endpoint.  Do not let a generic
+        // edit bypass the historical-order safety check.
+        validateMutableStatus(request.getStatus());
+
         // 2. Validate SEO name uniqueness if modified
         if (!product.getSeoName().equalsIgnoreCase(request.getSeoName()) && productRepository.existsBySeoName(request.getSeoName())) {
             throw new BusinessException(StatusCode.CONFLICT, "Product with SEO name '" + request.getSeoName() + "' already exists");
@@ -194,29 +223,31 @@ public class AdminProductServiceImpl implements AdminProductService {
 
         // 3. Verify category, brand, supplier references
         Category category = categoryRepository.findById(request.getCategoryId())
-                .filter(c -> !STATUS_DELETED.equalsIgnoreCase(c.getStatus()))
+                .filter(c -> STATUS_ACTIVE.equalsIgnoreCase(c.getStatus()))
                 .orElseThrow(() -> new BusinessException(StatusCode.CATEGORY_NOT_FOUND));
 
         Brand brand = null;
         if (request.getBrandId() != null) {
             brand = brandRepository.findById(request.getBrandId())
-                    .filter(b -> !STATUS_DELETED.equalsIgnoreCase(b.getStatus()))
+                    .filter(b -> STATUS_ACTIVE.equalsIgnoreCase(b.getStatus()))
                     .orElseThrow(() -> new BusinessException(StatusCode.BRAND_NOT_FOUND));
         }
 
-        Supplier supplier = null;
-        if (request.getSupplierId() != null) {
-            supplier = supplierRepository.findById(request.getSupplierId())
-                    .filter(s -> !STATUS_DELETED.equalsIgnoreCase(s.getStatus()))
-                    .orElseThrow(() -> new BusinessException(StatusCode.SUPPLIER_NOT_FOUND));
-        }
+        List<Supplier> suppliers = resolveSuppliers(request.getSupplierIds());
 
         // 4. Update entity fields via MapStruct @MappingTarget
         UUID employeeId = resolveEmployeeId(adminId);
         productMapper.updateEntityFromRequest(request, product);
         product.setCategory(category);
         product.setBrand(brand);
-        product.setSupplier(supplier);
+        productSupplierRepository.deleteByProductId(id);
+        for (Supplier selectedSupplier : suppliers) {
+            productSupplierRepository.save(ProductSupplier.builder()
+                    .id(new ProductSupplier.ProductSupplierId(id, selectedSupplier.getId()))
+                    .product(product)
+                    .supplier(selectedSupplier)
+                    .build());
+        }
         product.setUpdatedBy(employeeId);
         Product updatedProduct = productRepository.save(product);
 
@@ -224,6 +255,7 @@ public class AdminProductServiceImpl implements AdminProductService {
         List<ProductVariant> variants = productVariantRepository.findByProductIdWithDetails(id, STATUS_DELETED);
         ProductDetailResponse response = productMapper.toDetailResponse(updatedProduct);
         response.setVariants(productVariantMapper.toResponseList(variants));
+        response.setSuppliers(supplierMapper.toResponseList(suppliers));
         return response;
     }
 
@@ -235,7 +267,11 @@ public class AdminProductServiceImpl implements AdminProductService {
                 .filter(p -> !STATUS_DELETED.equalsIgnoreCase(p.getStatus()))
                 .orElseThrow(() -> new BusinessException(StatusCode.PRODUCT_NOT_FOUND));
 
-        // 2. Update status and audit metadata
+        // 2. Hide/restore only.  DELETED must go through deleteProduct(),
+        // which checks whether the product has existing order history.
+        validateMutableStatus(status);
+
+        // 3. Update status and audit metadata
         UUID employeeId = resolveEmployeeId(adminId);
         product.setStatus(status.toUpperCase());
         product.setUpdatedBy(employeeId);
@@ -245,12 +281,85 @@ public class AdminProductServiceImpl implements AdminProductService {
 
     private UUID resolveEmployeeId(UUID accountId) {
         if (accountId == null) {
-            return employeeRepository.findAll().stream().findFirst().map(com.ecm.server.model.Employee::getId).orElse(null);
+            return employeeRepository.findAll().stream().findFirst().map(com.ecm.server.model.Employee::getAccountId).orElse(null);
         }
         return employeeRepository.findByAccountId(accountId)
-                .map(com.ecm.server.model.Employee::getId)
-                .or(() -> employeeRepository.findById(accountId).map(com.ecm.server.model.Employee::getId))
-                .orElseGet(() -> employeeRepository.findAll().stream().findFirst().map(com.ecm.server.model.Employee::getId).orElse(null));
+                .map(com.ecm.server.model.Employee::getAccountId)
+                .or(() -> employeeRepository.findById(accountId).map(com.ecm.server.model.Employee::getAccountId))
+                .orElseGet(() -> employeeRepository.findAll().stream().findFirst().map(com.ecm.server.model.Employee::getAccountId).orElse(null));
+    }
+
+    private void validatePriceRange(ProductFilterRequest filter) {
+        Long minPrice = filter.getMinPrice();
+        Long maxPrice = filter.getMaxPrice();
+        if ((minPrice != null && minPrice < 0)
+                || (maxPrice != null && maxPrice < 0)
+                || (minPrice != null && maxPrice != null && minPrice > maxPrice)) {
+            throw new BusinessException(StatusCode.VALIDATION_ERROR,
+                    "Minimum price must be less than or equal to maximum price");
+        }
+    }
+
+    private void validateMutableStatus(String status) {
+        if (status != null && !"ACTIVE".equalsIgnoreCase(status)
+                && !"INACTIVE".equalsIgnoreCase(status)) {
+            throw new BusinessException(StatusCode.BAD_REQUEST,
+                    "Only ACTIVE or INACTIVE is allowed here; use the delete endpoint for DELETED");
+        }
+    }
+
+    private List<Supplier> resolveSuppliers(List<UUID> requestedIds) {
+        Set<UUID> ids = new java.util.LinkedHashSet<>();
+        if (requestedIds != null) {
+            requestedIds.stream().filter(java.util.Objects::nonNull).forEach(ids::add);
+        }
+        List<Supplier> suppliers = new ArrayList<>();
+        for (UUID supplierId : ids) {
+            suppliers.add(supplierRepository.findById(supplierId)
+                    .filter(s -> STATUS_ACTIVE.equalsIgnoreCase(s.getStatus()))
+                    .orElseThrow(() -> new BusinessException(StatusCode.SUPPLIER_NOT_FOUND)));
+        }
+        return suppliers;
+    }
+
+    private File resolveFile(CreateProductImageRequest request) {
+        return fileRepository.findById(request.getFileId())
+                .filter(file -> "ACTIVE".equalsIgnoreCase(file.getStatus()))
+                .orElseThrow(() -> new BusinessException(StatusCode.IMAGE_NOT_FOUND, "Referenced file was not found"));
+    }
+
+    private void validateOptionTypes(List<UUID> optionIds) {
+        Set<String> types = new HashSet<>();
+        for (UUID optionId : optionIds) {
+            Option option = optionRepository.findById(optionId)
+                    .filter(o -> STATUS_ACTIVE.equalsIgnoreCase(o.getStatus()))
+                    .orElseThrow(() -> new BusinessException(StatusCode.OPTION_NOT_FOUND));
+            if (!types.add(option.getType().trim().toUpperCase())) {
+                throw new BusinessException(StatusCode.BAD_REQUEST,
+                        "A variant cannot contain more than one option of the same type");
+            }
+        }
+    }
+
+    private void demoteExistingMainImage(ProductVariant variant, CreateProductImageRequest request) {
+        if (!Boolean.TRUE.equals(request.getIsMain())) {
+            return;
+        }
+        productImageRepository.findByProductVariantIdAndStatusNot(variant.getId(), STATUS_DELETED)
+                .stream()
+                .filter(ProductImage::isMain)
+                .forEach(existing -> {
+                    existing.setMain(false);
+                    productImageRepository.save(existing);
+                });
+    }
+
+    private void validateMainImages(List<CreateProductImageRequest> images) {
+        long mainCount = images.stream().filter(image -> Boolean.TRUE.equals(image.getIsMain())).count();
+        if (mainCount > 1) {
+            throw new BusinessException(StatusCode.BAD_REQUEST,
+                    "A product variant can have at most one main image");
+        }
     }
 
     @Override
@@ -261,18 +370,30 @@ public class AdminProductServiceImpl implements AdminProductService {
                 .filter(p -> !STATUS_DELETED.equalsIgnoreCase(p.getStatus()))
                 .orElseThrow(() -> new BusinessException(StatusCode.PRODUCT_NOT_FOUND));
 
-        // 2. Enforce safety constraint: verify product hasn't been ordered
+        // 2. Enforce the inventory/history safety boundary.  The MVP keeps
+        // only the current aggregate stock on each variant (there is no stock
+        // movement ledger), so a product with any remaining quantity is
+        // treated as already imported and cannot be deleted.  Order history is
+        // checked separately because those rows must remain addressable.
+        List<ProductVariant> variants = productVariantRepository.findByProductIdWithDetails(id, STATUS_DELETED);
+        if (variants != null && variants.stream()
+                .filter(variant -> !STATUS_DELETED.equalsIgnoreCase(variant.getStatus()))
+                .anyMatch(variant -> variant.getQuantity() != null && variant.getQuantity() > 0)) {
+            throw new BusinessException(StatusCode.CONFLICT,
+                    "Cannot delete product with remaining inventory stock");
+        }
+
+        // 3. Enforce safety constraint: verify product hasn't been ordered
         long orderCount = orderItemRepository.countByProductVariantProductId(id);
         if (orderCount > 0) {
             throw new BusinessException(StatusCode.CONFLICT, "Cannot delete product with existing customer orders");
         }
 
-        // 3. Perform soft delete on product and associated variants
+        // 4. Perform soft delete on product and associated variants
         product.setStatus(STATUS_DELETED);
         productRepository.save(product);
 
-        List<ProductVariant> variants = productVariantRepository.findByProductIdWithDetails(id, STATUS_DELETED);
-        for (ProductVariant variant : variants) {
+        for (ProductVariant variant : variants == null ? List.<ProductVariant>of() : variants) {
             variant.setStatus(STATUS_DELETED);
             productVariantRepository.save(variant);
         }

@@ -17,8 +17,8 @@ public class CartItemResponse {
     private String sku;
     private String model;
     private String imageUrl;
-    private Integer price;
-    private Integer priceSale;
+    private Long listPrice;
+
     private Integer quantity;
     private Long subtotal;
     private Integer stockQuantity;

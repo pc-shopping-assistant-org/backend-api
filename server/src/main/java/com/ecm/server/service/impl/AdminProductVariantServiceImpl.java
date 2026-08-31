@@ -18,7 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -31,6 +33,7 @@ public class AdminProductVariantServiceImpl implements AdminProductVariantServic
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ProductImageRepository productImageRepository;
+    private final FileRepository fileRepository;
     private final OptionRepository optionRepository;
     private final VariantOptionRepository variantOptionRepository;
     private final OrderItemRepository orderItemRepository;
@@ -64,10 +67,11 @@ public class AdminProductVariantServiceImpl implements AdminProductVariantServic
 
         // 4. Link variant options
         if (request.getOptionIds() != null && !request.getOptionIds().isEmpty()) {
+            validateOptionTypes(request.getOptionIds());
             List<VariantOption> variantOptions = new ArrayList<>();
             for (UUID optionId : request.getOptionIds()) {
                 Option option = optionRepository.findById(optionId)
-                        .filter(o -> !STATUS_DELETED.equalsIgnoreCase(o.getStatus()))
+                        .filter(o -> "ACTIVE".equalsIgnoreCase(o.getStatus()))
                         .orElseThrow(() -> new BusinessException(StatusCode.OPTION_NOT_FOUND));
                 VariantOption vo = VariantOption.builder()
                         .productVariant(savedVariant)
@@ -80,11 +84,14 @@ public class AdminProductVariantServiceImpl implements AdminProductVariantServic
 
         // 5. Save variant images
         if (request.getImages() != null && !request.getImages().isEmpty()) {
+            validateMainImages(request.getImages());
             List<ProductImage> productImages = new ArrayList<>();
             for (CreateProductImageRequest imgReq : request.getImages()) {
-                ProductImage img = productImageMapper.toEntity(imgReq);
-                img.setProductVariant(savedVariant);
-                productImages.add(productImageRepository.save(img));
+                        demoteExistingMainImage(savedVariant, imgReq);
+                        ProductImage img = productImageMapper.toEntity(imgReq);
+                        img.setProductVariant(savedVariant);
+                        img.setFile(resolveFile(imgReq));
+                        productImages.add(productImageRepository.save(img));
             }
             savedVariant.setImages(new java.util.LinkedHashSet<>(productImages));
         }
@@ -100,6 +107,10 @@ public class AdminProductVariantServiceImpl implements AdminProductVariantServic
         ProductVariant variant = productVariantRepository.findByIdWithDetails(variantId, STATUS_DELETED)
                 .orElseThrow(() -> new BusinessException(StatusCode.PRODUCT_VARIANT_NOT_FOUND));
 
+        // Deletion is guarded by deleteVariant() so order history cannot be
+        // bypassed through the generic update request.
+        validateMutableStatus(request.getStatus());
+
         // 2. Validate barcode uniqueness if modified
         if (request.getBarcode() != null && !request.getBarcode().isBlank()
                 && !request.getBarcode().equalsIgnoreCase(variant.getBarcode())
@@ -114,13 +125,14 @@ public class AdminProductVariantServiceImpl implements AdminProductVariantServic
 
         // 4. Update option associations if provided
         if (request.getOptionIds() != null) {
+            validateOptionTypes(request.getOptionIds());
             variant.getVariantOptions().clear();
             variantOptionRepository.deleteByProductVariantId(variantId);
             variantOptionRepository.flush();
             List<VariantOption> newOptions = new ArrayList<>();
             for (UUID optionId : request.getOptionIds()) {
                 Option option = optionRepository.findById(optionId)
-                        .filter(o -> !STATUS_DELETED.equalsIgnoreCase(o.getStatus()))
+                        .filter(o -> "ACTIVE".equalsIgnoreCase(o.getStatus()))
                         .orElseThrow(() -> new BusinessException(StatusCode.OPTION_NOT_FOUND));
                 VariantOption vo = VariantOption.builder()
                         .productVariant(variant)
@@ -168,6 +180,8 @@ public class AdminProductVariantServiceImpl implements AdminProductVariantServic
         // 2. Persist new image entity
         ProductImage image = productImageMapper.toEntity(request);
         image.setProductVariant(variant);
+        demoteExistingMainImage(variant, request);
+        image.setFile(resolveFile(request));
         ProductImage savedImage = productImageRepository.save(image);
 
         // 3. Return created image response DTO
@@ -190,11 +204,59 @@ public class AdminProductVariantServiceImpl implements AdminProductVariantServic
 
     private UUID resolveEmployeeId(UUID accountId) {
         if (accountId == null) {
-            return employeeRepository.findAll().stream().findFirst().map(com.ecm.server.model.Employee::getId).orElse(null);
+            return employeeRepository.findAll().stream().findFirst().map(com.ecm.server.model.Employee::getAccountId).orElse(null);
         }
         return employeeRepository.findByAccountId(accountId)
-                .map(com.ecm.server.model.Employee::getId)
-                .or(() -> employeeRepository.findById(accountId).map(com.ecm.server.model.Employee::getId))
-                .orElseGet(() -> employeeRepository.findAll().stream().findFirst().map(com.ecm.server.model.Employee::getId).orElse(null));
+                .map(com.ecm.server.model.Employee::getAccountId)
+                .or(() -> employeeRepository.findById(accountId).map(com.ecm.server.model.Employee::getAccountId))
+                .orElseGet(() -> employeeRepository.findAll().stream().findFirst().map(com.ecm.server.model.Employee::getAccountId).orElse(null));
+    }
+
+    private com.ecm.server.model.File resolveFile(CreateProductImageRequest request) {
+        return fileRepository.findById(request.getFileId())
+                .filter(file -> "ACTIVE".equalsIgnoreCase(file.getStatus()))
+                .orElseThrow(() -> new BusinessException(StatusCode.IMAGE_NOT_FOUND, "Referenced file was not found"));
+    }
+
+    private void validateOptionTypes(List<UUID> optionIds) {
+        Set<String> types = new HashSet<>();
+        for (UUID optionId : optionIds) {
+            Option option = optionRepository.findById(optionId)
+                    .filter(o -> "ACTIVE".equalsIgnoreCase(o.getStatus()))
+                    .orElseThrow(() -> new BusinessException(StatusCode.OPTION_NOT_FOUND));
+            if (!types.add(option.getType().trim().toUpperCase())) {
+                throw new BusinessException(StatusCode.BAD_REQUEST,
+                        "A variant cannot contain more than one option of the same type");
+            }
+        }
+    }
+
+    private void validateMutableStatus(String status) {
+        if (status != null && !"ACTIVE".equalsIgnoreCase(status)
+                && !"INACTIVE".equalsIgnoreCase(status)) {
+            throw new BusinessException(StatusCode.BAD_REQUEST,
+                    "Only ACTIVE or INACTIVE is allowed here; use the delete endpoint for DELETED");
+        }
+    }
+
+    private void demoteExistingMainImage(ProductVariant variant, CreateProductImageRequest request) {
+        if (!Boolean.TRUE.equals(request.getIsMain())) {
+            return;
+        }
+        productImageRepository.findByProductVariantIdAndStatusNot(variant.getId(), STATUS_DELETED)
+                .stream()
+                .filter(ProductImage::isMain)
+                .forEach(existing -> {
+                    existing.setMain(false);
+                    productImageRepository.save(existing);
+                });
+    }
+
+    private void validateMainImages(List<CreateProductImageRequest> images) {
+        long mainCount = images.stream().filter(image -> Boolean.TRUE.equals(image.getIsMain())).count();
+        if (mainCount > 1) {
+            throw new BusinessException(StatusCode.BAD_REQUEST,
+                    "A product variant can have at most one main image");
+        }
     }
 }

@@ -5,7 +5,7 @@ import com.ecm.server.common.CursorPageResponse;
 import com.ecm.server.common.StatusCode;
 import com.ecm.server.config.security.UserPrincipal;
 import com.ecm.server.dto.request.ReviewFilterRequest;
-import com.ecm.server.dto.request.UpdateStatusRequest;
+import com.ecm.server.dto.request.UpdateReviewStatusRequest;
 import com.ecm.server.dto.response.ReviewResponse;
 import com.ecm.server.service.AdminProductReviewService;
 import jakarta.validation.Valid;
@@ -27,7 +27,7 @@ public class AdminProductReviewController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<CursorPageResponse<ReviewResponse>>> getAdminReviews(
-            @ModelAttribute ReviewFilterRequest filter
+            @Valid @ModelAttribute ReviewFilterRequest filter
     ) {
         CursorPageResponse<ReviewResponse> response = adminProductReviewService.getAdminReviews(filter);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));
@@ -36,7 +36,7 @@ public class AdminProductReviewController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<ApiResponse<ReviewResponse>> updateReviewStatus(
             @PathVariable UUID id,
-            @Valid @RequestBody UpdateStatusRequest request,
+            @Valid @RequestBody UpdateReviewStatusRequest request,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         UUID adminId = (principal != null) ? principal.getAccountId() : null;

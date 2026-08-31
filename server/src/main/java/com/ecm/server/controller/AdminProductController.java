@@ -7,7 +7,7 @@ import com.ecm.server.config.security.UserPrincipal;
 import com.ecm.server.dto.request.CreateProductRequest;
 import com.ecm.server.dto.request.ProductFilterRequest;
 import com.ecm.server.dto.request.UpdateProductRequest;
-import com.ecm.server.dto.request.UpdateUserStatusRequest;
+import com.ecm.server.dto.request.UpdateProductStatusRequest;
 import com.ecm.server.dto.response.ProductDetailResponse;
 import com.ecm.server.dto.response.ProductSummaryResponse;
 import com.ecm.server.service.AdminProductService;
@@ -31,7 +31,7 @@ public class AdminProductController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<CursorPageResponse<ProductSummaryResponse>>> getAdminProducts(
-            @ModelAttribute ProductFilterRequest filter
+            @Valid @ModelAttribute ProductFilterRequest filter
     ) {
         CursorPageResponse<ProductSummaryResponse> response = adminProductService.getAdminProducts(filter);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));
@@ -61,7 +61,7 @@ public class AdminProductController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<ApiResponse<String>> updateProductStatus(
             @PathVariable UUID id,
-            @Valid @RequestBody UpdateUserStatusRequest request,
+            @Valid @RequestBody UpdateProductStatusRequest request,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         UUID adminId = (principal != null) ? principal.getAccountId() : null;

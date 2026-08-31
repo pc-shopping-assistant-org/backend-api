@@ -1,5 +1,7 @@
 package com.ecm.server.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -15,9 +17,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ResetPasswordRequest {
 
-    @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
     private String email;
+
+    /** Optional phone identifier; OTP is verified against the account email. */
+    @Pattern(regexp = "^(0|\\+84)[0-9]{9,10}$", message = "Phone number must be a valid Vietnamese phone number")
+    private String phone;
 
     @NotBlank(message = "OTP code is required")
     @Pattern(regexp = "^[0-9]{6}$", message = "OTP must be a 6-digit number")
@@ -30,4 +35,18 @@ public class ResetPasswordRequest {
             message = "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     )
     private String newPassword;
+
+    @JsonIgnore
+    @AssertTrue(message = "Email or phone is required")
+    public boolean hasIdentifier() {
+        return (email != null && !email.isBlank()) || (phone != null && !phone.isBlank());
+    }
+
+    @JsonIgnore
+    public String getLoginIdentifier() {
+        if (email != null && !email.isBlank()) {
+            return email.trim();
+        }
+        return phone == null ? null : phone.trim();
+    }
 }

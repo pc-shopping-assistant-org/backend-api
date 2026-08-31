@@ -6,12 +6,17 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.util.UUID;
+
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateReviewRequest {
+
+    @NotNull(message = "Order item ID is required")
+    private UUID orderItemId;
 
     @NotNull(message = "Rating is required")
     @Min(value = 1, message = "Rating must be at least 1")

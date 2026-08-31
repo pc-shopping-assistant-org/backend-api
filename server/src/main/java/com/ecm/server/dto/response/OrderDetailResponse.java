@@ -25,10 +25,18 @@ public class OrderDetailResponse {
     private Instant orderTime;
     private String status;
     private Long subtotalAmount;
-    private Integer discountAmount;
-    private Integer shipAmount;
+    private Long discountAmount;
+    private Long shippingFee;
     private Long totalAmount;
-    private PaymentSummaryResponse payment;
+    private String shippingMethodCode;
+
+    /**
+     * Every payment attempt belongs to the order history. This collection
+     * exposes failed/retried attempts so clients can render the complete
+     * transaction timeline.
+     */
+    @Builder.Default
+    private List<PaymentSummaryResponse> payments = Collections.emptyList();
 
     @Builder.Default
     private List<OrderItemDetailResponse> items = Collections.emptyList();

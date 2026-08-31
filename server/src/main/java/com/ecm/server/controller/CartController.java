@@ -24,18 +24,24 @@ public class CartController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<CartResponse>> getCart(
-            @AuthenticationPrincipal UserPrincipal principal
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestHeader(value = "X-Cart-Session", required = false) String sessionToken
     ) {
-        CartResponse response = cartService.getCart(principal.getAccountId());
+        CartResponse response = principal != null
+                ? cartService.getCart(principal.getAccountId())
+                : sessionToken == null ? cartService.getCart(null) : cartService.getCart(null, sessionToken);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));
     }
 
     @PostMapping("/items")
     public ResponseEntity<ApiResponse<CartResponse>> addToCart(
             @Valid @RequestBody AddToCartRequest request,
-            @AuthenticationPrincipal UserPrincipal principal
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestHeader(value = "X-Cart-Session", required = false) String sessionToken
     ) {
-        CartResponse response = cartService.addToCart(principal.getAccountId(), request);
+        CartResponse response = principal != null
+                ? cartService.addToCart(principal.getAccountId(), request)
+                : sessionToken == null ? cartService.addToCart(null, request) : cartService.addToCart(null, sessionToken, request);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));
     }
 
@@ -43,26 +49,41 @@ public class CartController {
     public ResponseEntity<ApiResponse<CartResponse>> updateCartItem(
             @PathVariable UUID variantId,
             @Valid @RequestBody UpdateCartItemRequest request,
-            @AuthenticationPrincipal UserPrincipal principal
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestHeader(value = "X-Cart-Session", required = false) String sessionToken
     ) {
-        CartResponse response = cartService.updateCartItem(principal.getAccountId(), variantId, request);
+        CartResponse response = principal != null
+                ? cartService.updateCartItem(principal.getAccountId(), variantId, request)
+                : sessionToken == null ? cartService.updateCartItem(null, variantId, request)
+                : cartService.updateCartItem(null, sessionToken, variantId, request);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));
     }
 
     @DeleteMapping("/items/{variantId}")
     public ResponseEntity<ApiResponse<CartResponse>> removeCartItem(
             @PathVariable UUID variantId,
-            @AuthenticationPrincipal UserPrincipal principal
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestHeader(value = "X-Cart-Session", required = false) String sessionToken
     ) {
-        CartResponse response = cartService.removeCartItem(principal.getAccountId(), variantId);
+        CartResponse response = principal != null
+                ? cartService.removeCartItem(principal.getAccountId(), variantId)
+                : sessionToken == null ? cartService.removeCartItem(null, variantId)
+                : cartService.removeCartItem(null, sessionToken, variantId);
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));
     }
 
     @DeleteMapping
     public ResponseEntity<ApiResponse<String>> clearCart(
-            @AuthenticationPrincipal UserPrincipal principal
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestHeader(value = "X-Cart-Session", required = false) String sessionToken
     ) {
-        cartService.clearCart(principal.getAccountId());
+        if (principal != null) {
+            cartService.clearCart(principal.getAccountId());
+        } else if (sessionToken == null) {
+            cartService.clearCart(null);
+        } else {
+            cartService.clearCart(null, sessionToken);
+        }
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, "Cart cleared successfully"));
     }
 }

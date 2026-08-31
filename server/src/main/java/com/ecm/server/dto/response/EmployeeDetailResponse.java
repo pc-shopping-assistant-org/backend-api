@@ -16,14 +16,16 @@ import java.util.UUID;
 public class EmployeeDetailResponse {
     private UUID id;
     private UUID accountId;
-    private String username;
     private UUID roleId;
     private String roleName;
     private String fullName;
+    private UUID avatarFileId;
     private String email;
     private String phone;
     private String gender;
     private LocalDate birthday;
+    private Long salary;
+    private LocalDate joinedAt;
     private String address;
     private String status;
     private Instant createdAt;

@@ -59,7 +59,7 @@ class AdminAnalyticsControllerTest {
 
         mockMvc.perform(get("/api/v1/admin/analytics/overview"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.totalRevenue").value(50000000))
                 .andExpect(jsonPath("$.data.completedOrders").value(80));
     }
@@ -82,7 +82,7 @@ class AdminAnalyticsControllerTest {
         mockMvc.perform(get("/api/v1/admin/analytics/revenue-chart")
                         .param("period", "DAY"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.period").value("DAY"))
                 .andExpect(jsonPath("$.data.dataPoints[0].revenue").value(10000000));
     }
@@ -102,7 +102,7 @@ class AdminAnalyticsControllerTest {
         mockMvc.perform(get("/api/v1/admin/analytics/top-selling")
                         .param("limit", "5"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data[0].productName").value("iPhone 16 Pro Max"))
                 .andExpect(jsonPath("$.data[0].totalQuantitySold").value(15));
     }
@@ -119,7 +119,7 @@ class AdminAnalyticsControllerTest {
 
         mockMvc.perform(get("/api/v1/admin/analytics/order-status-stats"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data[0].status").value("COMPLETED"))
                 .andExpect(jsonPath("$.data[0].count").value(80));
     }
