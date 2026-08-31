@@ -186,6 +186,14 @@ class DatabaseInvariantIntegrationTest {
     }
 
     @Test
+    void rejectsNegativeShippingMethodFee() {
+        assertThrows(DataAccessException.class, () -> jdbc.update(
+                "UPDATE shipping_methods SET fee = -1 WHERE id = ?",
+                shippingMethodId
+        ));
+    }
+
+    @Test
     void allowsOnlyOnePaidPaymentPerOrder() {
         insertOrder();
         jdbc.update("""

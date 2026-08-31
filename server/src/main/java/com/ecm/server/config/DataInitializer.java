@@ -79,14 +79,14 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void seedShippingMethods() {
-        createShippingMethodIfMissing("STANDARD", "Standard delivery");
-        createShippingMethodIfMissing("EXPRESS", "Express delivery");
-        createShippingMethodIfMissing("SAME_DAY", "Same-day delivery");
+        createShippingMethodIfMissing("STANDARD", "Standard delivery", 0L);
+        createShippingMethodIfMissing("EXPRESS", "Express delivery", 30_000L);
+        createShippingMethodIfMissing("SAME_DAY", "Same-day delivery", 50_000L);
     }
 
-    private void createShippingMethodIfMissing(String code, String name) {
+    private void createShippingMethodIfMissing(String code, String name, long fee) {
         shippingMethodRepository.findByCodeIgnoreCase(code).orElseGet(() ->
                 shippingMethodRepository.save(com.ecm.server.model.ShippingMethod.builder()
-                        .code(code).name(name).status("ACTIVE").build()));
+                        .code(code).name(name).fee(fee).status("ACTIVE").build()));
     }
 }

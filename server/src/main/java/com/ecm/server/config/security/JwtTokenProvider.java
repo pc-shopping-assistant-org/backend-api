@@ -125,6 +125,11 @@ public class JwtTokenProvider {
         return expiration.getTime() - System.currentTimeMillis();
     }
 
+    public long getIssuedAtTimeMsFromToken(String token) {
+        Date issuedAt = getClaimsFromToken(token).getIssuedAt();
+        return issuedAt == null ? 0L : issuedAt.getTime();
+    }
+
     public boolean validateToken(String token) {
         try {
             Jwts.parser()

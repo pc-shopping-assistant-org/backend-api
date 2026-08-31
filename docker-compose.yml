@@ -23,9 +23,13 @@ services:
     image: redis:${REDIS_VERSION:-7-alpine}
     container_name: ecm-redis
     restart: unless-stopped
+    # Redis stores OTPs, payment intents and JWT revocation markers. AOF plus
+    # a named volume preserves revocation state across a normal restart.
     command:
       - redis-server
       - --appendonly
+      - "yes"
+      - --aof-use-rdb-preamble
       - "yes"
       - --appendfsync
       - everysec
@@ -58,8 +62,10 @@ services:
 
 volumes:
   postgres_data:
+    name: ${POSTGRES_VOLUME_NAME:-ecm-postgres-v2}
     driver: local
   redis_data:
+    name: ${REDIS_VOLUME_NAME:-ecm-redis}
     driver: local
 
 networks:

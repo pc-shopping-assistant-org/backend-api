@@ -168,7 +168,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         ShippingMethod shippingMethod = resolveShippingMethod(request.getShippingMethodCode());
-        long shippingFee = resolveShippingFee(shippingMethod.getCode());
+        long shippingFee = resolveShippingFee(shippingMethod);
         long total;
         try {
             total = Math.max(0L, Math.addExact(Math.subtractExact(subtotal, orderDiscount), shippingFee));
@@ -423,14 +423,14 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new BusinessException(StatusCode.BAD_REQUEST, "Payment method is not available"));
     }
 
-    private long resolveShippingFee(String shippingCode) {
-        // Fees are deliberately snapshotted on orders; the method table is the
-        // normalized catalogue while this mapping is the initial local tariff.
-        return switch (shippingCode.toUpperCase()) {
-            case "EXPRESS" -> 30_000L;
-            case "SAME_DAY" -> 50_000L;
-            default -> 0L;
-        };
+    private long resolveShippingFee(ShippingMethod shippingMethod) {
+        Long fee = shippingMethod.getFee();
+        if (fee == null || fee < 0) {
+            throw new BusinessException(StatusCode.BAD_REQUEST, "Shipping method fee is invalid");
+        }
+        // Snapshot the configured tariff into orders.shipping_fee. Never look
+        // up the method again when reading an existing order.
+        return fee;
     }
 
     private String normalizeOrDefault(String requested, String fallback) {

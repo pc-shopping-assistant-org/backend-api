@@ -34,6 +34,10 @@ public class ShippingMethod {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
+    @Column(name = "fee", nullable = false)
+    @Builder.Default
+    private Long fee = 0L;
+
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private String status = "ACTIVE";

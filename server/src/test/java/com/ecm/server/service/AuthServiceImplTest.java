@@ -25,6 +25,8 @@ import java.time.Duration;
 import static org.mockito.Mockito.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -95,6 +97,23 @@ class AuthServiceImplTest {
     }
 
     @Test
+    void logout_revokesAllPreviouslyIssuedAccountTokens() {
+        var accountId = java.util.UUID.randomUUID();
+        when(tokenProvider.getExpirationTimeMsFromToken("access-token")).thenReturn(30_000L);
+        when(tokenProvider.getAccountIdFromToken("access-token")).thenReturn(accountId);
+        when(jwtProperties.getRefreshTokenExpirationMs()).thenReturn(604_800_000L);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        authService.logout("Bearer access-token", null);
+
+        verify(valueOperations).set(
+                eq(JwtAuthenticationFilter.ACCOUNT_REVOKED_BEFORE_PREFIX + accountId),
+                anyString(),
+                eq(Duration.ofMillis(604_800_000L))
+        );
+    }
+
+    @Test
     void logout_failsClosedWhenRedisCannotPersistRevocation() {
         when(tokenProvider.getExpirationTimeMsFromToken("access-token")).thenReturn(30_000L);
         when(redisTemplate.opsForValue()).thenThrow(new IllegalStateException("redis down"));
@@ -122,5 +141,31 @@ class AuthServiceImplTest {
         );
 
         assertEquals(com.ecm.server.common.StatusCode.SERVICE_UNAVAILABLE, exception.getStatusCode());
+    }
+
+    @Test
+    void refreshToken_rejectsTokenIssuedBeforeAccountLogout() {
+        var accountId = java.util.UUID.randomUUID();
+        String revocationKey = JwtAuthenticationFilter.ACCOUNT_REVOKED_BEFORE_PREFIX + accountId;
+        when(redisTemplate.hasKey(JwtAuthenticationFilter.BLACKLIST_TOKEN_PREFIX + "refresh-token"))
+                .thenReturn(false);
+        when(tokenProvider.validateToken("refresh-token")).thenReturn(true);
+        when(tokenProvider.isRefreshToken("refresh-token")).thenReturn(true);
+        when(tokenProvider.getAccountIdFromToken("refresh-token")).thenReturn(accountId);
+        when(redisTemplate.hasKey(revocationKey)).thenReturn(true);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(revocationKey)).thenReturn("2000");
+        when(tokenProvider.getIssuedAtTimeMsFromToken("refresh-token")).thenReturn(1000L);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> authService.refreshToken(
+                        com.ecm.server.dto.request.RefreshTokenRequest.builder()
+                                .refreshToken("refresh-token")
+                                .build()
+                )
+        );
+
+        assertEquals(com.ecm.server.common.StatusCode.TOKEN_INVALID, exception.getStatusCode());
     }
 }

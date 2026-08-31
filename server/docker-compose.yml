@@ -58,8 +58,14 @@ services:
 
 volumes:
   postgres_data:
+    # Version the default volume so a legacy schema cannot be attached by
+    # accident. Set POSTGRES_VOLUME_NAME explicitly when migrating a known
+    # existing volume.
+    name: ${POSTGRES_VOLUME_NAME:-ecm-postgres-v2}
     driver: local
   redis_data:
+    # Redis persists JWT revocation markers with AOF.
+    name: ${REDIS_VOLUME_NAME:-ecm-redis}
     driver: local
 
 networks:

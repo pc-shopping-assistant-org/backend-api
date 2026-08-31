@@ -109,7 +109,7 @@ class OrderServiceTest {
         when(discountRepository.findActiveAutomatic(any(Instant.class))).thenReturn(List.of(itemPromotion));
         when(discountRepository.findByCodeIgnoreCase("SAVE500K")).thenReturn(Optional.of(orderVoucher));
         when(shippingMethodRepository.findByCodeIgnoreCaseAndStatus("STANDARD", "ACTIVE"))
-                .thenReturn(Optional.of(ShippingMethod.builder().code("STANDARD").status("ACTIVE").build()));
+                .thenReturn(Optional.of(ShippingMethod.builder().code("STANDARD").fee(30_000L).status("ACTIVE").build()));
         when(paymentMethodRepository.findByCodeIgnoreCaseAndStatus("COD", "ACTIVE"))
                 .thenReturn(Optional.of(PaymentMethod.builder().code("COD").status("ACTIVE").build()));
         when(customerAddressRepository.findByCustomerAccountIdAndIsDefaultTrue(accountId))
@@ -132,7 +132,7 @@ class OrderServiceTest {
         Order saved = captor.getValue();
         assertEquals(18_000_000L, saved.getSubtotalAmount());
         assertEquals(500_000L, saved.getDiscountAmount());
-        assertEquals(17_500_000L, saved.getTotalAmount());
+        assertEquals(17_530_000L, saved.getTotalAmount());
         assertEquals(saved.getSubtotalAmount() - saved.getDiscountAmount() + saved.getShippingFee(),
                 saved.getTotalAmount());
     }

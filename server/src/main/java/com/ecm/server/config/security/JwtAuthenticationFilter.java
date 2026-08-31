@@ -27,6 +27,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     public static final String BEARER_PREFIX = "Bearer ";
     public static final String BLACKLIST_TOKEN_PREFIX = "token:blacklist:";
     public static final String BLOCKED_ACCOUNT_PREFIX = "account:blocked:";
+    public static final String ACCOUNT_REVOKED_BEFORE_PREFIX = "account:tokens-revoked-before:";
 
     private final JwtTokenProvider tokenProvider;
     private final StringRedisTemplate redisTemplate;
@@ -60,6 +61,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // trusted because it is stale after an admin lock/unlock.
                 if (userPrincipal.getAccountId() != null && isAccountBlocked(userPrincipal.getAccountId())) {
                     log.warn("Attempt to authenticate with blocked account: {}", userPrincipal.getAccountId());
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
+                // Logout revokes every token issued before the logout cutoff
+                // second for the account. This protects the optional
+                // refresh-token path without storing a second long-lived
+                // session identifier.
+                if (userPrincipal.getAccountId() != null
+                        && isAccountTokenRevoked(userPrincipal.getAccountId(), jwt)) {
+                    log.warn("Attempt to authenticate with a token issued before account logout: {}",
+                            userPrincipal.getAccountId());
                     filterChain.doFilter(request, response);
                     return;
                 }
@@ -113,6 +126,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // checked; a transient DB failure must not turn a locked account
             // into an active one.
             log.error("DB account status check failed for account [{}]", accountId, dbEx);
+            return true;
+        }
+    }
+
+    private boolean isAccountTokenRevoked(UUID accountId, String token) {
+        String key = ACCOUNT_REVOKED_BEFORE_PREFIX + accountId;
+        try {
+            if (!Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
+                return false;
+            }
+
+            String revokedBeforeValue = redisTemplate.opsForValue().get(key);
+            if (!StringUtils.hasText(revokedBeforeValue)) {
+                log.error("Account revocation marker is empty for account [{}]", accountId);
+                return true;
+            }
+
+            long revokedBefore = Long.parseLong(revokedBeforeValue);
+            // JWT NumericDate values have second precision. Keep the cutoff
+            // strict so a fresh login in the same second as logout survives.
+            long issuedAtSecond = tokenProvider.getIssuedAtTimeMsFromToken(token) / 1000L;
+            return issuedAtSecond < revokedBefore;
+        } catch (Exception ex) {
+            log.error("Redis unavailable during account token revocation check. Failing closed: {}",
+                    ex.getMessage());
             return true;
         }
     }

@@ -48,6 +48,7 @@ public class AuthServiceImpl implements AuthService {
     public static final String OTP_PURPOSE_FORGOT_PASSWORD = "FORGOT_PASSWORD";
     private static final int BEARER_PREFIX_LENGTH = 7;
     private static final int MILLIS_IN_SECOND = 1000;
+    private static final long MIN_REVOCATION_MARKER_TTL_MS = 1L;
 
     private final AccountRepository accountRepository;
     private final CustomerRepository customerRepository;
@@ -206,6 +207,11 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(StatusCode.TOKEN_INVALID, "Invalid or expired refresh token");
         }
 
+        UUID tokenAccountId = tokenProvider.getAccountIdFromToken(refreshToken);
+        if (tokenAccountId == null || isAccountTokenRevoked(tokenAccountId, refreshToken)) {
+            throw new BusinessException(StatusCode.TOKEN_INVALID, "Invalid or expired refresh token");
+        }
+
         // 2. Extract the email/phone subject and retrieve account
         String identifier = tokenProvider.getIdentifierFromToken(refreshToken);
         Account account = accountRepository.findByLoginIdentifier(identifier)
@@ -240,11 +246,15 @@ public class AuthServiceImpl implements AuthService {
         // The access token is always carried by the authenticated request.
         if (StringUtils.hasText(bearerToken)
                 && bearerToken.startsWith(JwtAuthenticationFilter.BEARER_PREFIX)) {
-            blacklistToken(bearerToken.substring(BEARER_PREFIX_LENGTH));
+            String accessToken = bearerToken.substring(BEARER_PREFIX_LENGTH);
+            blacklistToken(accessToken);
+            revokeAccountTokens(accessToken);
         }
 
-        // A refresh token is optional for clients that only hold an access
-        // token; when supplied it is revoked to prevent token re-issuance.
+        // The refresh token remains optional for clients that only hold an
+        // access token. The account-level revocation marker above invalidates
+        // every older refresh token, while this key keeps the supplied token
+        // explicitly blacklisted as well.
         if (StringUtils.hasText(refreshToken)) {
             if (!tokenProvider.validateToken(refreshToken) || !tokenProvider.isRefreshToken(refreshToken)) {
                 throw new BusinessException(StatusCode.TOKEN_INVALID, "Invalid refresh token");
@@ -269,12 +279,67 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
+    private void revokeAccountTokens(String accessToken) {
+        try {
+            UUID accountId = tokenProvider.getAccountIdFromToken(accessToken);
+            if (accountId == null) {
+                return;
+            }
+
+            long ttlMs = Math.max(
+                    MIN_REVOCATION_MARKER_TTL_MS,
+                    jwtProperties.getRefreshTokenExpirationMs()
+            );
+            String key = JwtAuthenticationFilter.ACCOUNT_REVOKED_BEFORE_PREFIX + accountId;
+            // A logout invalidates all tokens issued before this cutoff second.
+            // The marker lives as long as the configured refresh-token lifetime.
+            redisTemplate.opsForValue().set(
+                    key,
+                    Long.toString(System.currentTimeMillis() / MILLIS_IN_SECOND),
+                    Duration.ofMillis(ttlMs)
+            );
+        } catch (Exception ex) {
+            log.error("Failed to write account token revocation marker to Redis during logout", ex);
+            throw new BusinessException(
+                    StatusCode.SERVICE_UNAVAILABLE,
+                    "Session service is unavailable; logout was not completed"
+            );
+        }
+    }
+
     private boolean isTokenBlacklisted(String token) {
         try {
             return Boolean.TRUE.equals(redisTemplate.hasKey(
                     JwtAuthenticationFilter.BLACKLIST_TOKEN_PREFIX + token));
         } catch (Exception ex) {
             log.error("Redis unavailable during refresh-token blacklist check", ex);
+            throw new BusinessException(
+                    StatusCode.SERVICE_UNAVAILABLE,
+                    "Session service is unavailable; please try again later"
+            );
+        }
+    }
+
+    private boolean isAccountTokenRevoked(UUID accountId, String token) {
+        String key = JwtAuthenticationFilter.ACCOUNT_REVOKED_BEFORE_PREFIX + accountId;
+        try {
+            if (!Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
+                return false;
+            }
+
+            String revokedBeforeValue = redisTemplate.opsForValue().get(key);
+            if (!StringUtils.hasText(revokedBeforeValue)) {
+                return true;
+            }
+
+            long revokedBefore = Long.parseLong(revokedBeforeValue);
+            // JWT NumericDate values have second precision. Use a strict
+            // cutoff so a fresh login in the same second as logout is not
+            // accidentally rejected by the marker.
+            long issuedAtSecond = tokenProvider.getIssuedAtTimeMsFromToken(token) / MILLIS_IN_SECOND;
+            return issuedAtSecond < revokedBefore;
+        } catch (Exception ex) {
+            log.error("Redis unavailable during refresh-token account revocation check", ex);
             throw new BusinessException(
                     StatusCode.SERVICE_UNAVAILABLE,
                     "Session service is unavailable; please try again later"
