@@ -1,6 +1,7 @@
 package com.ecm.server.controller;
 
 import com.ecm.server.dto.request.LoginRequest;
+import com.ecm.server.dto.request.GoogleLoginRequest;
 import com.ecm.server.dto.request.RegisterRequest;
 import com.ecm.server.dto.response.AuthResponse;
 import com.ecm.server.dto.response.UserSummaryResponse;
@@ -75,6 +76,42 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.message").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.accessToken").value("mock-access-token"))
                 .andExpect(jsonPath("$.data.user.email").value("test@example.com"));
+    }
+
+    @Test
+    void googleLogin_whenValidIdToken_shouldReturn200AndAuthResponse() throws Exception {
+        AuthResponse authResponse = AuthResponse.builder()
+                .accessToken("mock-access-token")
+                .refreshToken("mock-refresh-token")
+                .tokenType("Bearer")
+                .expiresIn(86400)
+                .user(UserSummaryResponse.builder()
+                        .id(UUID.randomUUID())
+                        .role("ROLE_CUSTOMER")
+                        .fullName("Test User")
+                        .email("test@example.com")
+                        .build())
+                .build();
+        when(authService.loginWithGoogle(any(GoogleLoginRequest.class))).thenReturn(authResponse);
+
+        mockMvc.perform(post("/api/v1/auth/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                GoogleLoginRequest.builder().idToken("google-id-token").build()
+                        )))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.accessToken").value("mock-access-token"));
+    }
+
+    @Test
+    void googleLogin_whenTokenMissing_shouldReturnValidationEnvelope() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors").isArray());
     }
 
     @Test

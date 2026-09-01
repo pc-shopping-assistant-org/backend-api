@@ -19,6 +19,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -41,6 +42,23 @@ class AdminProductControllerTest {
         mockMvc = MockMvcBuilders.standaloneSetup(adminProductController)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
+    }
+
+    @Test
+    void getProductById_whenProductExists_shouldReturnDetail() throws Exception {
+        UUID productId = UUID.randomUUID();
+        ProductDetailResponse response = ProductDetailResponse.builder()
+                .id(productId)
+                .name("Hidden workstation")
+                .status("INACTIVE")
+                .build();
+        when(adminProductService.getAdminProductById(productId)).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/admin/products/{id}", productId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(productId.toString()))
+                .andExpect(jsonPath("$.data.status").value("INACTIVE"));
     }
 
     @Test

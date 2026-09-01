@@ -13,6 +13,8 @@ public interface AdminProductService {
 
     CursorPageResponse<ProductSummaryResponse> getAdminProducts(ProductFilterRequest filter);
 
+    ProductDetailResponse getAdminProductById(UUID id);
+
     ProductDetailResponse createProduct(CreateProductRequest request, UUID adminId);
 
     ProductDetailResponse updateProduct(UUID id, UpdateProductRequest request, UUID adminId);

@@ -20,6 +20,9 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
     Optional<Account> findByPhone(String phone);
 
     @EntityGraph(attributePaths = {"role"})
+    Optional<Account> findByGoogleSubject(String googleSubject);
+
+    @EntityGraph(attributePaths = {"role"})
     @Query("SELECT a FROM Account a WHERE LOWER(a.email) = LOWER(:identifier) OR a.phone = :identifier")
     Optional<Account> findByLoginIdentifier(@Param("identifier") String identifier);
 

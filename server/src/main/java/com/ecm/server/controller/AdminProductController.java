@@ -37,6 +37,12 @@ public class AdminProductController {
         return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<ProductDetailResponse>> getAdminProductById(@PathVariable UUID id) {
+        ProductDetailResponse response = adminProductService.getAdminProductById(id);
+        return ResponseEntity.ok(ApiResponse.success(StatusCode.SUCCESS, response));
+    }
+
     @PostMapping
     public ResponseEntity<ApiResponse<ProductDetailResponse>> createProduct(
             @Valid @RequestBody CreateProductRequest request,

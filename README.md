@@ -11,7 +11,8 @@ Spring Boot backend for the ECM e-commerce system.
 
 The canonical database schema is created by Flyway migrations, starting with
 `server/src/main/resources/db/migration/V1__init.sql` and applying incremental
-migrations such as `V2__add_shipping_method_fee.sql`. JPA runs with
+migrations such as `V2__add_shipping_method_fee.sql` and
+`V3__add_google_subject_to_accounts.sql`. JPA runs with
 `ddl-auto=validate`, so application startup detects schema drift instead of
 silently changing the database.
 
@@ -33,6 +34,12 @@ REDIS_PORT=6379
 
 `JWT_SECRET_KEY` must be Base64-encoded and decode to at least 32 bytes. Never
 commit real credentials or production secrets.
+
+Google Login is optional. Set `GOOGLE_CLIENT_ID` to the same Google Identity
+Services web-client ID used by the frontend to enable `POST /api/v1/auth/google`.
+The endpoint verifies the ID token and links its stable provider subject to an
+existing local account; it does not provision a profile without the required
+phone and address.
 
 The repository `docker-compose.yml` uses the versioned PostgreSQL volume
 `ecm-postgres-v2` by default. This prevents a legacy pre-canonical volume from

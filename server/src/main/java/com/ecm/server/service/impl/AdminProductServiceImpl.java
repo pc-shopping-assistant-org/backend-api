@@ -109,6 +109,23 @@ public class AdminProductServiceImpl implements AdminProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ProductDetailResponse getAdminProductById(UUID id) {
+        Product product = productRepository.findAdminDetailById(id)
+                .orElseThrow(() -> new BusinessException(StatusCode.PRODUCT_NOT_FOUND));
+
+        List<ProductVariant> variants = productVariantRepository.findByProductIdWithDetails(id, STATUS_DELETED);
+        ProductDetailResponse response = productMapper.toDetailResponse(product);
+        response.setSuppliers(product.getProductSuppliers() == null ? List.of() : product.getProductSuppliers().stream()
+                .map(ProductSupplier::getSupplier)
+                .filter(java.util.Objects::nonNull)
+                .map(supplierMapper::toResponse)
+                .toList());
+        response.setVariants(productVariantMapper.toResponseList(variants));
+        return response;
+    }
+
+    @Override
     @Transactional
     public ProductDetailResponse createProduct(CreateProductRequest request, UUID adminId) {
         // 1. Validate SEO name uniqueness

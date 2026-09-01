@@ -2,6 +2,7 @@ package com.ecm.server.service;
 
 import com.ecm.server.common.StatusCode;
 import com.ecm.server.exception.BusinessException;
+import com.ecm.server.dto.response.ProductDetailResponse;
 import com.ecm.server.mapper.ProductImageMapper;
 import com.ecm.server.mapper.ProductMapper;
 import com.ecm.server.mapper.ProductVariantMapper;
@@ -56,6 +57,33 @@ class AdminProductServiceTest {
     @Mock private SupplierMapper supplierMapper;
 
     @InjectMocks private AdminProductServiceImpl service;
+
+    @Test
+    void getAdminProductByIdIncludesInactiveVariantsForEditing() {
+        UUID productId = UUID.randomUUID();
+        Product product = Product.builder().id(productId).status("INACTIVE").build();
+        ProductVariant variant = ProductVariant.builder()
+                .id(UUID.randomUUID())
+                .product(product)
+                .status("INACTIVE")
+                .quantity(0)
+                .build();
+        ProductDetailResponse response = ProductDetailResponse.builder()
+                .id(productId)
+                .status("INACTIVE")
+                .build();
+
+        when(productRepository.findAdminDetailById(productId)).thenReturn(Optional.of(product));
+        when(productVariantRepository.findByProductIdWithDetails(productId, "DELETED"))
+                .thenReturn(List.of(variant));
+        when(productMapper.toDetailResponse(product)).thenReturn(response);
+        when(productVariantMapper.toResponseList(List.of(variant))).thenReturn(List.of());
+
+        ProductDetailResponse result = service.getAdminProductById(productId);
+
+        assertEquals(productId, result.getId());
+        assertEquals("INACTIVE", result.getStatus());
+    }
 
     @Test
     void deleteProductRejectsProductWithRemainingInventory() {

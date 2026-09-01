@@ -17,6 +17,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
@@ -135,6 +137,23 @@ public class GlobalExceptionHandler {
 
         StatusCode statusCode = StatusCode.MALFORMED_JSON;
         ApiResponse<Void> response = ApiResponse.error(statusCode);
+        return ResponseEntity.status(statusCode.getHttpStatus()).body(response);
+    }
+
+    /**
+     * Multipart parsing happens before a controller method is invoked. Keep
+     * upload-size and malformed multipart failures inside the same API
+     * envelope instead of leaking Spring's default HTML/JSON error body.
+     */
+    @ExceptionHandler({MaxUploadSizeExceededException.class, MultipartException.class})
+    public ResponseEntity<ApiResponse<Void>> handleMultipartException(Exception ex) {
+        log.warn("Multipart request rejected: {}", ex.getMessage());
+
+        StatusCode statusCode = StatusCode.VALIDATION_ERROR;
+        ApiResponse<Void> response = ApiResponse.error(
+                statusCode,
+                "Uploaded file is missing, invalid or exceeds the configured size limit"
+        );
         return ResponseEntity.status(statusCode.getHttpStatus()).body(response);
     }
 

@@ -21,6 +21,8 @@ import com.ecm.server.repository.EmployeeRepository;
 import com.ecm.server.repository.RoleRepository;
 import com.ecm.server.service.AuthService;
 import com.ecm.server.service.OtpService;
+import com.ecm.server.service.google.GoogleIdentity;
+import com.ecm.server.service.google.GoogleIdentityVerifier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -59,6 +61,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider tokenProvider;
     private final JwtProperties jwtProperties;
     private final OtpService otpService;
+    private final GoogleIdentityVerifier googleIdentityVerifier;
     private final StringRedisTemplate redisTemplate;
     private final UserMapper userMapper;
 
@@ -167,35 +170,45 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new BusinessException(StatusCode.INVALID_CREDENTIALS));
 
         // 2. Validate account active state
-        if (STATUS_LOCKED.equalsIgnoreCase(account.getStatus()) || STATUS_BLOCKED.equalsIgnoreCase(account.getStatus())) {
-            throw new BusinessException(StatusCode.ACCOUNT_LOCKED);
-        }
-        if (STATUS_DELETED.equalsIgnoreCase(account.getStatus()) || !STATUS_ACTIVE.equalsIgnoreCase(account.getStatus())) {
-            throw new BusinessException(StatusCode.ACCOUNT_INACTIVE);
-        }
+        ensureAccountUsable(account);
 
         // 3. Match hashed password
         if (!passwordEncoder.matches(request.getPassword(), account.getPasswordHash())) {
             throw new BusinessException(StatusCode.INVALID_CREDENTIALS);
         }
 
-        // 4. Build user summary response via MapStruct
-        String roleName = account.getRole() != null ? account.getRole().getName() : ROLE_CUSTOMER;
-        UserSummaryResponse userSummary = buildUserSummary(account);
+        // 4. Build user summary and generate JWT tokens
+        return issueTokenPair(account);
+    }
 
-        // 5. Generate JWT tokens
-        UUID employeeId = employeeRepository.findByAccountId(account.getId())
-                .map(com.ecm.server.model.Employee::getAccountId)
-                .orElse(null);
-        String accessToken = tokenProvider.generateAccessToken(account.getId(), account.getEmail(), roleName, employeeId);
-        String refreshToken = tokenProvider.generateRefreshToken(account.getId(), account.getEmail());
+    @Override
+    @Transactional
+    public AuthResponse loginWithGoogle(GoogleLoginRequest request) {
+        GoogleIdentity identity = googleIdentityVerifier.verify(request.getIdToken());
 
-        return AuthResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .expiresIn(jwtProperties.getAccessTokenExpirationMs() / MILLIS_IN_SECOND)
-                .user(userSummary)
-                .build();
+        // The stable provider subject is the lookup key after the first link.
+        Account account = accountRepository.findByGoogleSubject(identity.subject()).orElse(null);
+        if (account == null) {
+            // Email is used only to link an already registered local account.
+            // This preserves the required local phone/address onboarding flow.
+            account = accountRepository.findByEmailIgnoreCase(identity.email())
+                    .orElseThrow(() -> new BusinessException(StatusCode.GOOGLE_ACCOUNT_NOT_LINKED));
+
+            if (StringUtils.hasText(account.getGoogleSubject())
+                    && !identity.subject().equals(account.getGoogleSubject())) {
+                // Do not silently rebind a local account to another Google
+                // identity when the provider subject has already been set.
+                throw new BusinessException(StatusCode.INVALID_CREDENTIALS);
+            }
+
+            ensureAccountUsable(account);
+            account.setGoogleSubject(identity.subject());
+            account = accountRepository.save(account);
+        } else {
+            ensureAccountUsable(account);
+        }
+
+        return issueTokenPair(account);
     }
 
     @Override
@@ -376,6 +389,33 @@ public class AuthServiceImpl implements AuthService {
 
         // 3. Evict OTP from Redis
         otpService.deleteOtp(account.getEmail(), OTP_PURPOSE_FORGOT_PASSWORD);
+    }
+
+    private void ensureAccountUsable(Account account) {
+        if (STATUS_LOCKED.equalsIgnoreCase(account.getStatus())
+                || STATUS_BLOCKED.equalsIgnoreCase(account.getStatus())) {
+            throw new BusinessException(StatusCode.ACCOUNT_LOCKED);
+        }
+        if (STATUS_DELETED.equalsIgnoreCase(account.getStatus())
+                || !STATUS_ACTIVE.equalsIgnoreCase(account.getStatus())) {
+            throw new BusinessException(StatusCode.ACCOUNT_INACTIVE);
+        }
+    }
+
+    private AuthResponse issueTokenPair(Account account) {
+        String roleName = account.getRole() != null ? account.getRole().getName() : ROLE_CUSTOMER;
+        UUID employeeId = employeeRepository.findByAccountId(account.getId())
+                .map(Employee::getAccountId)
+                .orElse(null);
+        String accessToken = tokenProvider.generateAccessToken(account.getId(), account.getEmail(), roleName, employeeId);
+        String refreshToken = tokenProvider.generateRefreshToken(account.getId(), account.getEmail());
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .expiresIn(jwtProperties.getAccessTokenExpirationMs() / MILLIS_IN_SECOND)
+                .user(buildUserSummary(account))
+                .build();
     }
 
     private UserSummaryResponse buildUserSummary(Account account) {

@@ -38,6 +38,7 @@ public enum StatusCode {
     FORBIDDEN(40300, "Access denied, you do not have permission", HttpStatus.FORBIDDEN),
     ACCOUNT_LOCKED(40301, "Account is locked", HttpStatus.FORBIDDEN),
     ACCOUNT_INACTIVE(40302, "Account is inactive or deleted", HttpStatus.FORBIDDEN),
+    GOOGLE_ACCOUNT_NOT_LINKED(40303, "Google account is not linked", HttpStatus.FORBIDDEN),
 
     // =====================================================================
     // 4. Resource Not Found Codes (404xx)

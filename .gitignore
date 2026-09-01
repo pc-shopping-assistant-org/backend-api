@@ -9,6 +9,7 @@ docs/
 
 # Build outputs
 target/
+var/uploads/
 build/
 *.jar
 *.war

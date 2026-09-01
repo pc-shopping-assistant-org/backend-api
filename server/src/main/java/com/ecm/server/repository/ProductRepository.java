@@ -37,6 +37,20 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
             """)
     Optional<Product> findDetailById(@Param("id") UUID id, @Param("status") String status);
 
+    /**
+     * Admin detail view must be able to edit a hidden product, while deleted
+     * history remains outside the management surface.
+     */
+    @Query("""
+                SELECT DISTINCT p FROM Product p
+                LEFT JOIN FETCH p.brand
+                LEFT JOIN FETCH p.category
+                LEFT JOIN FETCH p.productSuppliers ps
+                LEFT JOIN FETCH ps.supplier
+                WHERE p.id = :id AND p.status <> 'DELETED'
+            """)
+    Optional<Product> findAdminDetailById(@Param("id") UUID id);
+
     @Query("""
                 SELECT DISTINCT p FROM Product p
                 LEFT JOIN FETCH p.brand

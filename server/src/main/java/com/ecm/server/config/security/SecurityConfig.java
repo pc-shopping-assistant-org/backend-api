@@ -64,6 +64,10 @@ public class SecurityConfig {
                         // OpenAPI/Swagger documentation
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
 
+                        // Uploaded catalog media is public once marked ACTIVE;
+                        // mutations remain protected by the admin controller.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/files/**").permitAll()
+
                         // Public Catalog Browsing Endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories", "/api/v1/categories/**").permitAll()
@@ -72,6 +76,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/options", "/api/v1/options/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/discounts", "/api/v1/discounts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/payment-methods").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/shipping-methods").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/*/reviews").permitAll()
                         .requestMatchers("/api/v1/ai/**").permitAll()
                         .requestMatchers("/api/v1/cart/**").permitAll()

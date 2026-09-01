@@ -43,6 +43,14 @@ public class Account {
     @Column(name = "phone", nullable = false, unique = true, length = 15)
     private String phone;
 
+    /**
+     * Stable Google account subject ({@code sub}) used as the provider
+     * identity.  It is nullable because local accounts can exist without a
+     * Google link; the database keeps non-null values unique.
+     */
+    @Column(name = "google_subject", unique = true, length = 255)
+    private String googleSubject;
+
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
